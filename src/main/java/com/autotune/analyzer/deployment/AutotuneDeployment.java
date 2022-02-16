@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Red Hat, IBM Corporation and others.
+ * Copyright (c) 2020, 2022 Red Hat, IBM Corporation and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -528,10 +528,24 @@ public class AutotuneDeployment
 					}
 				}
 
-				String tunableName = tunableJson.optString(AutotuneConfigConstants.NAME);
-				String tunableValueType = tunableJson.optString(AutotuneConfigConstants.VALUE_TYPE);
-				String upperBound = tunableJson.optString(AutotuneConfigConstants.UPPER_BOUND);
-				String lowerBound = tunableJson.optString(AutotuneConfigConstants.LOWER_BOUND);
+				String tunableName = tunableJson.optString(AnalyzerConstants.AutotuneConfigConstants.NAME);
+				String tunableValueType = tunableJson.optString(AnalyzerConstants.AutotuneConfigConstants.VALUE_TYPE);
+
+				String upperBound = "";
+				String lowerBound = "";
+				List<String> choices = new ArrayList<>();
+
+				// check the tunable type and if it's categorical then we need to add the list of the values else we'll take the upper, lower bound values
+				if (tunableValueType.equalsIgnoreCase("categorical")) {
+					JSONArray categoricalChoicesJson = tunableJson.getJSONArray(AnalyzerConstants.AutotuneConfigConstants.TUNABLE_CHOICES);
+					for (Object categoricalChoiceObject : categoricalChoicesJson) {
+						String categoricalChoice = (String) categoricalChoiceObject;
+						choices.add(categoricalChoice);
+					}
+				} else {
+					upperBound = tunableJson.optString(AnalyzerConstants.AutotuneConfigConstants.UPPER_BOUND);
+					lowerBound = tunableJson.optString(AnalyzerConstants.AutotuneConfigConstants.LOWER_BOUND);
+				}
 				// Read in step from the tunable, set it to '1' if not specified.
 				double step = tunableJson.optDouble(AutotuneConfigConstants.STEP, 1);
 
@@ -545,7 +559,12 @@ public class AutotuneDeployment
 
 				Tunable tunable;
 				try {
-					tunable = new Tunable(tunableName, step, upperBound, lowerBound, tunableValueType, queriesMap, sloClassList, layerName);
+					// check the tunable type and then invoke the corresponding constructer 
+					if (tunableValueType.equalsIgnoreCase("categorical")) {
+						tunable = new Tunable(tunableName, step, tunableValueType, queriesMap, sloClassList, layerName, choices);
+					} else {
+						tunable = new Tunable(tunableName, step, upperBound, lowerBound, tunableValueType, queriesMap, sloClassList, layerName);
+					}
 					tunableArrayList.add(tunable);
 				} catch (InvalidBoundsException e) {
 					e.printStackTrace();
@@ -781,14 +800,27 @@ public class AutotuneDeployment
 			try {
 				Map<String, String> queries = new HashMap<>(tunable.getQueries());
 
-				Tunable tunableCopy = new Tunable(tunable.getName(),
+				Tunable tunableCopy;
+				if ( tunable.getChoices().isEmpty()) {
+					tunableCopy = new Tunable(tunable.getName(),
 						tunable.getStep(),
 						tunable.getUpperBound(),
 						tunable.getLowerBound(),
 						tunable.getValueType(),
 						queries,
 						tunable.getSloClassList(),
-						tunable.getLayerName());
+						tunable.getLayerName()
+					);
+				} else{
+					tunableCopy = new Tunable(tunable.getName(),
+						tunable.getStep(),
+						tunable.getValueType(),
+						queries,
+						tunable.getSloClassList(),
+						tunable.getLayerName(),
+						tunable.getChoices()
+					);
+				}
 				tunables.add(tunableCopy);
 			} catch (InvalidBoundsException ignored) { }
 		}
