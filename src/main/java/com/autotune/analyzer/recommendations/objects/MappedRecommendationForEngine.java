@@ -4,6 +4,7 @@ import com.autotune.analyzer.recommendations.RecommendationConfigItem;
 import com.autotune.analyzer.recommendations.RecommendationNotification;
 import com.autotune.analyzer.utils.AnalyzerConstants;
 import com.autotune.utils.KruizeConstants;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.google.gson.annotations.SerializedName;
 
 import java.util.HashMap;
@@ -11,7 +12,11 @@ import java.util.HashMap;
 public class MappedRecommendationForEngine {
 
     public MappedRecommendationForEngine() {
-
+        this.podsCount = 0;
+        this.confidence_level = 0.0;
+        this.config = new HashMap<>();
+        this.variation = new HashMap<>();
+        this.notificationHashMap = new HashMap<>();
     }
 
     @SerializedName(KruizeConstants.JSONKeys.PODS_COUNT)
@@ -64,5 +69,13 @@ public class MappedRecommendationForEngine {
 
     public void setNotificationHashMap(HashMap<Integer, RecommendationNotification> notificationHashMap) {
         this.notificationHashMap = notificationHashMap;
+    }
+
+    public void addNotification(RecommendationNotification recommendationNotification) {
+        if (null == this.notificationHashMap)
+            this.notificationHashMap = new HashMap<>();
+        if (null != recommendationNotification)
+            if (!this.notificationHashMap.containsKey(recommendationNotification.getCode()))
+                this.notificationHashMap.put(recommendationNotification.getCode(), recommendationNotification);
     }
 }
