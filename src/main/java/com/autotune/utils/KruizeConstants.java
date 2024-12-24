@@ -921,6 +921,12 @@ public class KruizeConstants {
         }
     }
 
+    public static final class MetadataProfileConstants {
+        public static final String METADATA_PROFILE_VALIDATION_FAILURE = "MetadataProfile validation failed: ";
+        public static final String METADATA_PROFILE_VALIDATION_AND_ADD_FAILURE = "Validate and add metadata profile failed: {}";
+        public static final String ADD_METADATA_PROFILE = "Added MetadataProfile: {}";
+    }
+
     public static final class KAFKA_CONSTANTS {
         public static final String RECOMMENDATIONS_TOPIC = "recommendations-topic";
         public static final String ERROR_TOPIC = "error-topic";
