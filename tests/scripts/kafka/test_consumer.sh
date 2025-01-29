@@ -16,23 +16,17 @@
 #
 
 # Kafka Configuration
-BROKER="kruize-kafka-cluster-kafka-bootstrap.monitoring:9092"
-TOPICS=("kruize-recommendations-topic" "kruize-error-topic" "kruize-summary-topic")
-CONSUMER_GROUP="test-consumer-group"
-
-# Check if Kafka CLI is available
-if ! command -v kafka-console-consumer.sh &> /dev/null; then
-  echo "Error: kafka-console-consumer.sh not found. Ensure Kafka CLI is installed and available in PATH."
-  exit 1
-fi
+NAMESPACE="kafka"
+BROKER="kruize-kafka-cluster-kafka-bootstrap.kafka:9092"
+TOPICS=("recommendations-topic" "error-topic" "summary-topic")
 
 # Consume messages from each topic
 for TOPIC in "${TOPICS[@]}"; do
   echo "Consuming messages from topic: $TOPIC"
-  kafka-console-consumer.sh --bootstrap-server $BROKER \
-                            --topic $TOPIC \
-                            --from-beginning \
-                            --consumer-property group.id=$CONSUMER_GROUP &
+  oc exec -n $NAMESPACE kruize-kafka-cluster-kafka-0 -- bin/kafka-console-consumer.sh \
+      --topic $TOPIC \
+      --bootstrap-server kruize-kafka-cluster-kafka-bootstrap.kafka.svc.cluster.local:9092 \
+      --from-beginning
 done
 
 echo "Test consumers are now running for all topics. Press Ctrl+C to exit."

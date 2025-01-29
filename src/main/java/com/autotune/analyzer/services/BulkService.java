@@ -76,16 +76,16 @@ public class BulkService extends HttpServlet {
             String excludeParams = req.getParameter("exclude");
             String experiment_name = req.getParameter("experiment_name");
 
-            LOGGER.info(" include fields: {}", includeParams);
-            LOGGER.info(" exclude fields: {}", excludeParams);
+            LOGGER.debug(" include fields: {}", includeParams);
+            LOGGER.debug(" exclude fields: {}", excludeParams);
 
             // Parse the include and exclude parameters into lists
             Set<String> includeFields = includeParams != null ? new HashSet<>(Arrays.asList(includeParams.split(","))) : new HashSet<>(Arrays.asList("summary"));
             Set<String> excludeFields = excludeParams != null ? new HashSet<>(Arrays.asList(excludeParams.split(","))) : Collections.emptySet();
 
-            LOGGER.info(" include fields: {}", includeFields);
-            LOGGER.info(" exclude fields: {}", excludeFields);
-            LOGGER.info(" experiment_name: {}", experiment_name);
+            LOGGER.debug(" include fields: {}", includeFields);
+            LOGGER.debug(" exclude fields: {}", excludeFields);
+            LOGGER.debug(" experiment_name: {}", experiment_name);
 
             // If the parameter is not provided (null), default it to false
             boolean verbose = verboseParam != null && Boolean.parseBoolean(verboseParam);
@@ -101,7 +101,7 @@ public class BulkService extends HttpServlet {
                 return;
             }
             jobDetails = jobStatusMap.get(jobID);
-            LOGGER.info("Job Status: " + jobDetails.getSummary().getStatus());
+            LOGGER.info("Job Status: {}", jobDetails.getSummary().getStatus());
             resp.setContentType(JSON_CONTENT_TYPE);
             resp.setCharacterEncoding(CHARACTER_ENCODING);
             SimpleFilterProvider filters = new SimpleFilterProvider();
@@ -148,6 +148,8 @@ public class BulkService extends HttpServlet {
             // Set response type
             response.setContentType(JSON_CONTENT_TYPE);
             response.setCharacterEncoding(CHARACTER_ENCODING);
+            // TODO: Consume from Kruize Input topic (This will be done in the subsequent release)
+            //  kafkaExecutorService.execute(new KafkaConsumerTask(bootstrapServers, topic));
 
             // Create ObjectMapper instance
             ObjectMapper objectMapper = new ObjectMapper();
@@ -158,19 +160,14 @@ public class BulkService extends HttpServlet {
             // Generate a unique jobID
             String jobID = UUID.randomUUID().toString();
             BulkJobStatus jobStatus = new BulkJobStatus(jobID, IN_PROGRESS, Instant.now(), payload);
-            BulkJobStatus processedJobStatus = new BulkJobStatus(jobID, NotificationConstants.Status.PROCESSED.getStatus(), Instant.now());
-            BulkJobStatus failedJobStatus = new BulkJobStatus(jobID, NotificationConstants.Status.FAILED.getStatus(), Instant.now());
             jobStatusMap.put(jobID, jobStatus);
             // Submit the job to be processed asynchronously
-            executorService.submit(new BulkJobManager(jobID, jobStatus, processedJobStatus, failedJobStatus, payload));      //TOdo remove payload as it is part of jobStatus object
+            executorService.submit(new BulkJobManager(jobID, jobStatus, payload));      //TOdo remove payload as it is part of jobStatus object
 
             // Just sending a simple success response back
             // Return the jobID to the user
             JSONObject jsonObject = new JSONObject();
             jsonObject.put(JOB_ID, jobID);
-
-            // TODO: Submit Kafka consumer task to the thread pool (This will be done in the subsequent release)
-            //  kafkaExecutorService.execute(new KafkaConsumerTask(bootstrapServers, topic));
 
             response.getWriter().write(jsonObject.toString());
             statusValue = "success";
@@ -199,7 +196,7 @@ public class BulkService extends HttpServlet {
     }
 
 
-    public String filterJson(BulkJobStatus jsonInput, Set<String> includeFields, Set<String> excludeFields, String experiment_name) throws Exception {
+    public static String filterJson(BulkJobStatus jsonInput, Set<String> includeFields, Set<String> excludeFields, String experiment_name) throws Exception {
         ObjectMapper mapper = new ObjectMapper();
         // Include or exclude fields
         SimpleFilterProvider filters = new SimpleFilterProvider();

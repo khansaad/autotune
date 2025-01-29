@@ -16,9 +16,9 @@
 #
 set -e
 
-NAMESPACE="monitoring"
+NAMESPACE="kafka"
 CLUSTER_NAME="kruize-kafka-cluster"
-TOPICS=("kruize-recommendations-topic" "kruize-error-topic" "kruize-summary-topic")
+TOPICS=("recommendations-topic" "error-topic" "summary-topic")
 
 echo "Creating namespace: $NAMESPACE..."
 kubectl create namespace $NAMESPACE || echo "Namespace $NAMESPACE already exists."
@@ -47,7 +47,7 @@ spec:
     storage:
       type: ephemeral
   zookeeper:
-    replicas: 3
+    replicas: 1
     storage:
       type: ephemeral
   entityOperator:

@@ -211,7 +211,7 @@ data:
       "experimentNameFormat" : "%datasource%|%clustername%|%namespace%|%workloadname%(%workloadtype%)|%containername%",
       "bulkapilimit" : 1000,
       "isKafkaEnabled" : "true",
-      "kafkaBootstrapServers" : "kruize-kafka-cluster-kafka-bootstrap.monitoring.svc.cluster.local:9092",
+      "kafkaBootstrapServers" : "kruize-kafka-cluster-kafka-bootstrap.kafka.svc.cluster.local:9092",
       "hibernate": {
         "dialect": "org.hibernate.dialect.PostgreSQLDialect",
         "driver": "org.postgresql.Driver",

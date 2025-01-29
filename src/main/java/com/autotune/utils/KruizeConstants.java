@@ -931,5 +931,10 @@ public class KruizeConstants {
         public static final String RECOMMENDATIONS_TOPIC = "recommendations-topic";
         public static final String ERROR_TOPIC = "error-topic";
         public static final String SUMMARY_TOPIC = "summary-topic";
+
+        public static final String SUMMARY = "summary";
+        public static final String EXPERIMENTS = "experiments";
+        public static final String RECOMMENDATIONS = "recommendations";
+
     }
 }

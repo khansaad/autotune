@@ -18,7 +18,7 @@
 
 set -e
 
-NAMESPACE="openshift-tuning"
+NAMESPACE="kafka"
 CLUSTER_NAME="kruize-kafka-cluster"
 TOPICS=("kruize-recommendations-topic" "kruize-error-topic" "kruize-summary-topic")
 
