@@ -411,8 +411,8 @@ public class ExperimentValidation {
                         }
                     }
                 } else if (expObj.getExperiment_usecase_type().isLocal_monitoring()) {
-                    // Check both single datasource and datasources list
-                    if (null == expObj.getDataSource() && (null == expObj.getDatasources() || expObj.getDatasources().isEmpty())) {
+                    List<String> datasources = expObj.getDatasources();
+                    if (datasources == null || datasources.isEmpty()) {
                         errorMsg = errorMsg.concat(String.format(LOCAL_MONITORING_DATASOURCE_MANDATORY, expObj.getExperimentName()));
                         missingLocalDatasource = true;
                     }

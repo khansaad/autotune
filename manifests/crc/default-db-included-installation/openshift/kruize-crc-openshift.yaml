@@ -264,11 +264,11 @@ data:
           }
         },
         {
-          "name": "cryostat",
+          "name": "cryostat-sample",
           "provider": "cryostat",
           "serviceName": "",
           "namespace": "",
-          "url": "https://cryostat-ultron.cryostat-ultron.svc.cluster.local:4180",
+          "url": "https://cryostat-sample.cryostat.svc.cluster.local:4180",
           "authentication": {
             "type": "bearer",
             "credentials": {
@@ -398,7 +398,7 @@ spec:
               done
       containers:
         - name: kruize
-          image: quay.io/bharathappali/exman:cryostat-layer-detect
+          image: quay.io/khansaad/autotune_operator:iirj
           imagePullPolicy: Always
           volumeMounts:
             - name: config-volume

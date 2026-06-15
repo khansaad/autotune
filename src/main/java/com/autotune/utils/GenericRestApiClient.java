@@ -127,7 +127,7 @@ public class GenericRestApiClient {
             // Apply authentication
             applyAuthentication(httpRequestBase);
 
-            LOGGER.debug("Executing Prometheus metrics request: {}", httpRequestBase.getRequestLine());
+            LOGGER.debug("Executing metrics request: {}", httpRequestBase.getRequestLine());
 
 
             // Execute the request and get the HttpResponse
@@ -135,10 +135,34 @@ public class GenericRestApiClient {
 
             // Get and print the response code
             int responseCode = response.getStatusLine().getStatusCode();
-            LOGGER.debug("Response code: {}", responseCode);
+            LOGGER.info("Response code: {}", responseCode);
+
+            // Validate response code before processing
+            if (responseCode < 200 || responseCode >= 300) {
+                String errorMsg = String.format("HTTP request failed with response code: %d, URL: %s",
+                    responseCode, baseURL);
+                LOGGER.error(errorMsg);
+                
+                // Try to get error response body for more details
+                try {
+                    String errorBody = new StringResponseHandler().handleResponse(response);
+                    LOGGER.error("Error response body: {}", errorBody);
+                } catch (Exception e) {
+                    LOGGER.debug("Could not read error response body", e);
+                }
+                
+                throw new IOException(errorMsg);
+            }
 
             // Get the response body if needed
             jsonResponse = new StringResponseHandler().handleResponse(response);
+            // Validate that we got a non-empty response
+            if (jsonResponse == null || jsonResponse.trim().isEmpty()) {
+                String errorMsg = String.format("Received empty response from datasource. URL: %s, Method: %s",
+                    baseURL, methodType);
+                LOGGER.error(errorMsg);
+                throw new IOException(errorMsg);
+            }
 
             if (!methodType.equalsIgnoreCase("POST")) {
                 // Parse the JSON response

@@ -27,7 +27,6 @@ import com.google.gson.annotations.JsonAdapter;
 import com.google.gson.annotations.SerializedName;
 
 import java.sql.Timestamp;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -174,8 +173,10 @@ public class CreateExperimentAPIObject extends BaseSO implements ExperimentTypeA
      * @return List of datasource names, never null
      */
     public List<String> getDatasources() {
-        // If single datasource is explicitly set, it is authoritative and the list is ignored.
-        return datasources;
+        if (datasources == null && datasource != null) {
+            return Collections.singletonList(datasource);
+        }
+        return datasources != null ? datasources : Collections.emptyList();
     }
 
     /**

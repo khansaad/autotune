@@ -82,15 +82,36 @@ public class CryostatDataOperatorImpl extends DataSourceOperatorImpl {
                 new GenericRestApiClient(dataSource);
 
         String baseURL = dataSource.getUrl().toString();
+        String fullURL = baseURL + getQueryEndpoint();
 
-        apiClient.setBaseURL(baseURL + getQueryEndpoint());
+        apiClient.setBaseURL(fullURL);
+
+        LOGGER.debug("Executing Cryostat GraphQL query. URL: {}, Query: {}", fullURL, query);
 
         try {
-            return apiClient.fetchMetricsJson(
+            JSONObject response = apiClient.fetchMetricsJson(
                     "POST",
                     query);
+            
+            if (response == null) {
+                LOGGER.warn("Received null response from Cryostat. URL: {}, Query: {}", fullURL, query);
+            } else {
+                LOGGER.debug("Successfully received response from Cryostat. Response keys: {}", response.keySet());
+            }
+            
+            return response;
         } catch (UnknownHostException e) {
+            LOGGER.error("UnknownHostException while querying Cryostat. Host: {}, Error: {}",
+                dataSource.getUrl().getHost(), e.getMessage());
             return null;
+        } catch (IOException e) {
+            LOGGER.error("IOException while querying Cryostat. URL: {}, Query: {}, Error: {}",
+                fullURL, query, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Unexpected exception while querying Cryostat. URL: {}, Query: {}, Error: {}",
+                fullURL, query, e.getMessage(), e);
+            throw e;
         }
     }
 

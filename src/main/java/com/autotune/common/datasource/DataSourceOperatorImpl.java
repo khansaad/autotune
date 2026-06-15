@@ -167,11 +167,14 @@ public class DataSourceOperatorImpl implements DataSourceOperator {
      */
     @Override
     public DataSourceOperatorImpl getOperator(String provider) {
-        if (provider.equalsIgnoreCase(KruizeConstants.SupportedDatasources.PROMETHEUS)) {
+        if (provider == null) {
+            return null;
+        }
+        if (provider.equalsIgnoreCase(KruizeConstants.SupportedDatasources.PROMETHEUS)
+                || provider.equalsIgnoreCase(KruizeConstants.SupportedDatasources.THANOS)) {
             return PrometheusDataOperatorImpl.getInstance();
         }
-        if (provider.equalsIgnoreCase(
-                KruizeConstants.SupportedDatasources.CRYOSTAT)) {
+        if (provider.equalsIgnoreCase(KruizeConstants.SupportedDatasources.CRYOSTAT)) {
             return CryostatDataOperatorImpl.getInstance();
         }
         return null;

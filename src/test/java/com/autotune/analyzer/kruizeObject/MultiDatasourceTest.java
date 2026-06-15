@@ -180,7 +180,9 @@ class MultiDatasourceTest {
 
         // Then
         assertEquals("prometheus", apiObject.getDatasource());
-        assertNull(apiObject.getDatasources());
+        assertNotNull(apiObject.getDatasources());
+        assertEquals(1, apiObject.getDatasources().size());
+        assertEquals("prometheus", apiObject.getDatasources().get(0));
     }
 
     @Test
@@ -214,6 +216,41 @@ class MultiDatasourceTest {
         assertEquals(2, apiObject.getDatasources().size());
         assertEquals("cryostat-1", apiObject.getDatasources().get(0));
         assertEquals("thanos-2", apiObject.getDatasources().get(1));
+    }
+
+    @Test
+    @DisplayName("CreateExperimentAPIObject should support backward compatibility for single thanos datasource")
+    void createExperimentShouldSupportSingleThanosDatasource() {
+        CreateExperimentAPIObject apiObject = new CreateExperimentAPIObject();
+
+        apiObject.setDatasource("thanos");
+
+        assertEquals("thanos", apiObject.getDatasource());
+        assertEquals(Collections.singletonList("thanos"), apiObject.getDatasources());
+    }
+
+    @Test
+    @DisplayName("CreateExperimentAPIObject should support backward compatibility for single cryostat datasource")
+    void createExperimentShouldSupportSingleCryostatDatasource() {
+        CreateExperimentAPIObject apiObject = new CreateExperimentAPIObject();
+
+        apiObject.setDatasource("cryostat");
+
+        assertEquals("cryostat", apiObject.getDatasource());
+        assertEquals(Collections.singletonList("cryostat"), apiObject.getDatasources());
+    }
+
+    @Test
+    @DisplayName("CreateExperimentAPIObject should support datasource instance names in datasources list")
+    void createExperimentShouldSupportDatasourceInstanceNames() {
+        CreateExperimentAPIObject apiObject = new CreateExperimentAPIObject();
+
+        apiObject.setDatasources(Arrays.asList("thanos-prod", "cryostat-dev", "prometheus-stage"));
+
+        assertEquals(3, apiObject.getDatasources().size());
+        assertEquals("thanos-prod", apiObject.getDatasources().get(0));
+        assertEquals("cryostat-dev", apiObject.getDatasources().get(1));
+        assertEquals("prometheus-stage", apiObject.getDatasources().get(2));
     }
 
     @Test
