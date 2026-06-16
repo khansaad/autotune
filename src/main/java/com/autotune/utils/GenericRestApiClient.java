@@ -135,7 +135,7 @@ public class GenericRestApiClient {
 
             // Get and print the response code
             int responseCode = response.getStatusLine().getStatusCode();
-            LOGGER.info("Response code: {}", responseCode);
+            LOGGER.debug("Response code: {}", responseCode);
 
             // Validate response code before processing
             if (responseCode < 200 || responseCode >= 300) {

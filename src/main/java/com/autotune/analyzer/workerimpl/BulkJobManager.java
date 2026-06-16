@@ -149,9 +149,11 @@ public class BulkJobManager implements Runnable {
             DataSourceMetadataInfo metadataInfo = null;
             DataSourceManager dataSourceManager = new DataSourceManager();
             DataSourceInfo datasource = null;
+            List<DataSourceInfo> resolvedDatasources = new ArrayList<>();
             String labelString = null;
             Map<String, String> includeResourcesMap = new HashMap<>();
             Map<String, String> excludeResourcesMap = new HashMap<>();
+            LOGGER.debug("Bulk input: {}", bulkInput);
             try {
                 if (this.bulkInput.getFilter() != null) {
                     labelString = getLabels(this.bulkInput.getFilter());
@@ -159,10 +161,16 @@ public class BulkJobManager implements Runnable {
                     excludeResourcesMap = buildRegexFilters(this.bulkInput.getFilter().getExclude());
                 }
                 if (this.bulkInput.getDatasources() == null || this.bulkInput.getDatasources().isEmpty()) {
+                    // Only set default datasource if no datasources list is provided
                     this.bulkInput.setDatasource(CREATE_EXPERIMENT_CONFIG_BEAN.getDatasourceName());
+                    this.bulkInput.setDatasources(Collections.singletonList(CREATE_EXPERIMENT_CONFIG_BEAN.getDatasourceName()));
                 }
                 try {
-                    datasource = CommonUtils.getDataSourceInfo(this.bulkInput.getDatasource());
+                    resolvedDatasources = resolveBulkDatasources(this.bulkInput.getDatasources());
+                    // For multi-datasource scenarios, we don't set a default single datasource
+                    if (!resolvedDatasources.isEmpty()) {
+                        datasource = resolvedDatasources.get(0);
+                    }
                 } catch (Exception e) {
                     LOGGER.error("Error in bulk job manager for job_id {} due to {}", jobID, e.getMessage());
                     e.printStackTrace();
@@ -175,16 +183,11 @@ public class BulkJobManager implements Runnable {
 
                 int measurementDuration = handleMeasurementDuration(datasource);
 
-                if (null != datasource) {
+                if (!resolvedDatasources.isEmpty()) {
                     JSONObject daterange = processDateRange(this.bulkInput.getTime_range());
-                    if (null != daterange) {
-                        metadataInfo = dataSourceManager.importMetadataFromDataSource(metadataProfileName, datasource, labelString, (Long) daterange.get(START_TIME),
-                                (Long) daterange.get(END_TIME), (Integer) daterange.get(STEPS), measurementDuration, includeResourcesMap, excludeResourcesMap);
-                    } else {
-                        metadataInfo = dataSourceManager.importMetadataFromDataSource(metadataProfileName, datasource, labelString, 0, 0,
-                                0, measurementDuration, includeResourcesMap, excludeResourcesMap);
-                    }
-                    if (null == metadataInfo) {
+                    metadataInfo = importMetadataFromDatasources(dataSourceManager, metadataProfileName,resolvedDatasources,
+                            labelString, daterange, measurementDuration, includeResourcesMap, excludeResourcesMap);
+                    if (null == metadataInfo || metadataInfo.getDatasources() == null || metadataInfo.getDatasources().isEmpty()) {
                         setFinalJobStatus(COMPLETED, String.valueOf(HttpURLConnection.HTTP_OK), NOTHING_INFO, datasource);
                     } else {
                         jobData.setMetadata(metadataInfo);
@@ -544,6 +547,81 @@ public class BulkJobManager implements Runnable {
         }
     }
 
+    private List<DataSourceInfo> resolveBulkDatasources(List<String> datasourceNames) throws Exception {
+        List<DataSourceInfo> resolved = new ArrayList<>();
+        if (datasourceNames == null || datasourceNames.isEmpty()) {
+            return resolved;
+        }
+
+        for (String datasourceName : datasourceNames) {
+            resolved.add(CommonUtils.getDataSourceInfo(datasourceName));
+        }
+        return resolved;
+    }
+
+    private DataSourceMetadataInfo importMetadataFromDatasources(DataSourceManager dataSourceManager,
+                                                                 String metadataProfileName,
+                                                                 List<DataSourceInfo> datasources,
+                                                                 String labelString,
+                                                                 JSONObject daterange,
+                                                                 int measurementDuration,
+                                                                 Map<String, String> includeResourcesMap,
+                                                                 Map<String, String> excludeResourcesMap) throws Exception {
+        HashMap<String, DataSource> mergedDatasources = new HashMap<>();
+
+        for (DataSourceInfo datasourceInfo : datasources) {
+            // Skip datasources that don't support PromQL (metadata queries are PromQL-based)
+            if (!isPromQlCapableProvider(datasourceInfo.getProvider())) {
+                LOGGER.info("Skipping metadata import for datasource '{}' with provider '{}' as it doesn't support PromQL queries",
+                        datasourceInfo.getName(), datasourceInfo.getProvider());
+                continue;
+            }
+
+            DataSourceMetadataInfo currentMetadataInfo;
+            if (daterange != null) {
+                currentMetadataInfo = dataSourceManager.importMetadataFromDataSource(metadataProfileName, datasourceInfo,
+                        labelString, (Long) daterange.get(START_TIME), (Long) daterange.get(END_TIME), (Integer) daterange.get(STEPS),
+                        measurementDuration, includeResourcesMap, excludeResourcesMap);
+            } else {
+                currentMetadataInfo = dataSourceManager.importMetadataFromDataSource(
+                        metadataProfileName,
+                        datasourceInfo,
+                        labelString,
+                        0,
+                        0,
+                        0,
+                        measurementDuration,
+                        includeResourcesMap,
+                        excludeResourcesMap
+                );
+            }
+
+            if (currentMetadataInfo == null || currentMetadataInfo.getDatasources() == null || currentMetadataInfo.getDatasources().isEmpty()) {
+                continue;
+            }
+
+            mergedDatasources.putAll(currentMetadataInfo.getDatasources());
+        }
+
+        if (mergedDatasources.isEmpty()) {
+            return null;
+        }
+
+        return new DataSourceMetadataInfo(mergedDatasources);
+    }
+
+    /**
+     * Check if a datasource provider supports PromQL queries
+     * @param provider The datasource provider name
+     * @return true if the provider supports PromQL, false otherwise
+     */
+    private boolean isPromQlCapableProvider(String provider) {
+        return provider != null && (
+                provider.equalsIgnoreCase(KruizeConstants.SupportedDatasources.PROMETHEUS) ||
+                provider.equalsIgnoreCase(KruizeConstants.SupportedDatasources.THANOS)
+        );
+    }
+
     private String getLabels(BulkInput.FilterWrapper filter) {
         String uniqueKey = null;
         try {
@@ -665,7 +743,13 @@ public class BulkJobManager implements Runnable {
      */
     public String frameExperimentName(String labelString, DataSourceCluster dataSourceCluster, DataSourceNamespace dataSourceNamespace, DataSourceWorkload dataSourceWorkload, DataSourceContainer dataSourceContainer) {
 
-        String datasource = this.bulkInput.getDatasource();
+        String datasource;
+        if (this.bulkInput.getDatasources() != null && !this.bulkInput.getDatasources().isEmpty()) {
+            // Join all datasources with underscore separator
+            datasource = String.join("_", this.bulkInput.getDatasources());
+        } else {
+            datasource = this.bulkInput.getDatasource();
+        }
         String clusterName = dataSourceCluster.getDataSourceClusterName();
         String namespace = dataSourceNamespace.getNamespace();
         String workloadName = dataSourceWorkload.getWorkloadName();

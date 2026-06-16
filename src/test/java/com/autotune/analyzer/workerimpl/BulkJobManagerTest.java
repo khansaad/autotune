@@ -17,6 +17,7 @@ package com.autotune.analyzer.workerimpl;
 
 import org.junit.jupiter.api.AfterEach;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -30,6 +31,8 @@ import com.autotune.common.data.dataSourceMetadata.DataSourceContainer;
 import com.autotune.common.data.dataSourceMetadata.DataSourceNamespace;
 import com.autotune.common.data.dataSourceMetadata.DataSourceWorkload;
 import com.autotune.operator.KruizeDeploymentInfo;
+
+import java.util.Arrays;
 
 /**
  * Unit Test with Mocking Template Principles
@@ -75,6 +78,7 @@ class BulkJobManagerMockedTest {
 
         bulkInput = mock(BulkInput.class);
         when(bulkInput.getDatasource()).thenReturn("prometheus");
+        when(bulkInput.getDatasources()).thenReturn(Arrays.asList("prometheus", "cryostat"));
 
         jobStatus = mock(BulkJobStatus.class);
 
@@ -104,22 +108,22 @@ class BulkJobManagerMockedTest {
     }
 
     @Test
-    @DisplayName("Frame experiment name without labels")
+    @DisplayName("Frame experiment name without labels - joins all datasources with underscore")
     void shouldFrameExperimentNameWithoutLabels() {
         // When
         String experimentName = bulkJobManager.frameExperimentName(
                 null, cluster, namespace, workload, container
         );
 
-        // Then
+        // Then - all datasources joined with underscore
         assertEquals(
-                "prometheus-cluster1-default-sysbench-deployment-sysbench",
+                "prometheus_cryostat-cluster1-default-sysbench-deployment-sysbench",
                 experimentName
         );
     }
 
     @Test
-    @DisplayName("Frame experiment name with labels")
+    @DisplayName("Frame experiment name with labels - joins all datasources with underscore")
     void shouldFrameExperimentNameWithLabels() {
         // Given
         KruizeDeploymentInfo.experiment_name_format =
@@ -132,10 +136,63 @@ class BulkJobManagerMockedTest {
                 labelString, cluster, namespace, workload, container
         );
 
-        // Then
+        // Then - all datasources joined with underscore
         assertEquals(
-                "prometheus-cluster1-default-sysbench-deployment-sysbench-prod-v1.2",
+                "prometheus_cryostat-cluster1-default-sysbench-deployment-sysbench-prod-v1.2",
                 experimentName
         );
+    }
+    @Test
+    @DisplayName("Frame experiment name joins all datasources from datasources list with underscore")
+    void shouldUseFirstDatasourceFromDatasourcesList() {
+        // Given
+        when(bulkInput.getDatasource()).thenReturn(null);
+        when(bulkInput.getDatasources()).thenReturn(Arrays.asList("cryostat", "thanos"));
+
+        // When
+        String experimentName = bulkJobManager.frameExperimentName(
+                null, cluster, namespace, workload, container
+        );
+
+        // Then - all datasources joined with underscore
+        assertEquals(
+                "cryostat_thanos-cluster1-default-sysbench-deployment-sysbench",
+                experimentName
+        );
+    }
+
+    @Test
+    @DisplayName("Prepared experiment payload should preserve multi-datasource list")
+    void shouldPreserveDatasourcesInPreparedExperimentPayload() throws Exception {
+        // When
+        String experimentName = bulkJobManager.frameExperimentName(
+                null, cluster, namespace, workload, container
+        );
+        var method = BulkJobManager.class.getDeclaredMethod(
+                "prepareCreateExperimentJSONInput",
+                DataSourceContainer.class,
+                DataSourceCluster.class,
+                DataSourceWorkload.class,
+                DataSourceNamespace.class,
+                String.class,
+                java.util.List.class
+        );
+        method.setAccessible(true);
+
+        Object result = method.invoke(
+                bulkJobManager,
+                container,
+                cluster,
+                workload,
+                namespace,
+                experimentName,
+                new java.util.ArrayList<>()
+        );
+
+        // Then
+        com.autotune.analyzer.serviceObjects.CreateExperimentAPIObject apiObject =
+                (com.autotune.analyzer.serviceObjects.CreateExperimentAPIObject) result;
+        assertEquals("prometheus", apiObject.getDatasource());
+        assertIterableEquals(Arrays.asList("prometheus", "cryostat"), apiObject.getDatasources());
     }
 }
