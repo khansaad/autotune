@@ -68,6 +68,18 @@ public class BulkServiceValidation {
         validationOutputData = buildErrorOutput(validateTimeRange(payload.getTime_range()), jobID);
         if (validationOutputData != null) return validationOutputData;
 
+        // Validate cluster_name if provided
+        validationOutputData = buildErrorOutput(validateClusterName(payload.getCluster_name()), jobID);
+        if (validationOutputData != null) return validationOutputData;
+
+        // Validate model_settings if provided
+        validationOutputData = buildErrorOutput(validateModelSettings(payload.getModel_settings()), jobID);
+        if (validationOutputData != null) return validationOutputData;
+
+        // Validate term_settings if provided
+        validationOutputData = buildErrorOutput(validateTermSettings(payload.getTerm_settings()), jobID);
+        if (validationOutputData != null) return validationOutputData;
+
         if (payload.getDatasource() != null) {
             validationOutputData = buildErrorOutput(validateDatasourceConnection(payload.getDatasource()), jobID);
         }
@@ -166,5 +178,119 @@ public class BulkServiceValidation {
             errorMessage = KruizeConstants.KRUIZE_BULK_API.TIME_RANGE_EXCEPTION;
         }
         return errorMessage;
+    }
+
+    /**
+     * Validates the cluster_name field if provided.
+     * Checks for:
+     * <ul>
+     *     <li>Empty string (not allowed)</li>
+     *     <li>Length (max 253 characters per Kubernetes DNS-1123 subdomain spec)</li>
+     *     <li>Format (lowercase alphanumeric with hyphens and dots)</li>
+     * </ul>
+     *
+     * @param clusterName the cluster name to validate (can be null)
+     * @return an error message if validation fails; otherwise an empty string
+     */
+    public static String validateClusterName(String clusterName) {
+        if (clusterName == null) {
+            return ""; // null is valid (will use metadata cluster)
+        }
+        
+        if (clusterName.isEmpty()) {
+            return "cluster_name cannot be an empty string. Either provide a valid cluster name or omit the field";
+        }
+        
+        if (clusterName.length() > 253) {
+            return "cluster_name is too long (max 253 characters). Provided: " + clusterName.length() + " characters";
+        }
+        
+        // Kubernetes DNS-1123 subdomain format: lowercase alphanumeric, hyphens, and dots
+        // Must start and end with alphanumeric
+        if (!clusterName.matches("^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$")) {
+            return "Invalid cluster_name format. Must be a valid Kubernetes DNS-1123 subdomain: " +
+                   "lowercase alphanumeric characters, hyphens, and dots only. " +
+                   "Must start and end with alphanumeric. Provided: " + clusterName;
+        }
+        
+        return "";
+    }
+
+    /**
+     * Validates the model_settings field if provided.
+     * Checks for:
+     * <ul>
+     *     <li>Non-null models list when model_settings is provided</li>
+     *     <li>Non-empty models list</li>
+     *     <li>Valid model names (performance, cost)</li>
+     * </ul>
+     *
+     * @param modelSettings the model settings to validate (can be null)
+     * @return an error message if validation fails; otherwise an empty string
+     */
+    public static String validateModelSettings(com.autotune.analyzer.kruizeObject.ModelSettings modelSettings) {
+        if (modelSettings == null) {
+            return ""; // null is valid (will use all default models)
+        }
+        
+        if (modelSettings.getModels() == null || modelSettings.getModels().isEmpty()) {
+            return "model_settings.models cannot be null or empty when model_settings is provided. " +
+                   "Valid model names: performance, cost";
+        }
+        
+        // Valid model names
+        java.util.List<String> validModels = java.util.Arrays.asList("performance", "cost");
+        
+        for (String model : modelSettings.getModels()) {
+            if (model == null || model.trim().isEmpty()) {
+                return "model_settings.models contains null or empty model name";
+            }
+            
+            String modelLower = model.toLowerCase().trim();
+            if (!validModels.contains(modelLower)) {
+                return "Invalid model name: '" + model + "'. Valid model names are: " + validModels;
+            }
+        }
+        
+        return "";
+    }
+
+    /**
+     * Validates the term_settings field if provided.
+     * Checks for:
+     * <ul>
+     *     <li>Non-null terms list when term_settings is provided</li>
+     *     <li>Non-empty terms list</li>
+     *     <li>Valid term names (short, medium, long)</li>
+     * </ul>
+     *
+     * @param termSettings the term settings to validate (can be null)
+     * @return an error message if validation fails; otherwise an empty string
+     */
+    public static String validateTermSettings(com.autotune.analyzer.kruizeObject.TermSettings termSettings) {
+        if (termSettings == null) {
+            return ""; // null is valid (will use all default terms)
+        }
+        
+        if (termSettings.getTerms() == null || termSettings.getTerms().isEmpty()) {
+            return "term_settings.terms cannot be null or empty when term_settings is provided. " +
+                   "Valid term names: short, medium, long";
+        }
+        
+        // Valid term names
+        java.util.List<String> validTerms = java.util.Arrays.asList("short", "medium", "long");
+        
+        for (String term : termSettings.getTerms()) {
+            if (term == null || term.trim().isEmpty()) {
+                return "term_settings.terms contains null or empty term name";
+            }
+            
+            String termLower = term.toLowerCase().trim();
+            if (!validTerms.contains(termLower)) {
+                return "Invalid term name: '" + term + "'. Valid term names are: " + validTerms;
+            }
+        }
+        
+        return "";
     }
 }
