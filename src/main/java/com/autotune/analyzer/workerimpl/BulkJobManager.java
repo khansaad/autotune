@@ -625,10 +625,14 @@ public class BulkJobManager implements Runnable {
         createExperimentAPIObject.setApiVersion(CREATE_EXPERIMENT_CONFIG_BEAN.getVersion());
         createExperimentAPIObject.setExperimentName(experiment_name);
         createExperimentAPIObject.setDatasource(this.bulkInput.getDatasource());
-        // Use cluster_name from bulk payload if provided, otherwise use metadata cluster
-        String clusterName = (this.bulkInput.getCluster_name() != null && !this.bulkInput.getCluster_name().isEmpty())
-            ? this.bulkInput.getCluster_name()
-            : dsc.getDataSourceClusterName();
+        // Use cluster_name from bulk payload if provided (trimmed), otherwise use metadata cluster
+        String clusterName = dsc.getDataSourceClusterName(); // default to metadata cluster
+        if (this.bulkInput.getCluster_name() != null) {
+            String trimmedClusterName = this.bulkInput.getCluster_name().trim();
+            if (!trimmedClusterName.isEmpty()) {
+                clusterName = trimmedClusterName;
+            }
+        }
         createExperimentAPIObject.setClusterName(clusterName);
         createExperimentAPIObject.setPerformanceProfile(CREATE_EXPERIMENT_CONFIG_BEAN.getPerformanceProfile());
         createExperimentAPIObject.setMetadataProfile(CREATE_EXPERIMENT_CONFIG_BEAN.getMetadataProfile());
