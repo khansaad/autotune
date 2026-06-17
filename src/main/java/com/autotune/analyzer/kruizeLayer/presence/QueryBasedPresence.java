@@ -88,7 +88,7 @@ public class QueryBasedPresence implements LayerPresenceDetector {
             for (DataSourceInfo dataSourceInfo : experimentDataSources) {
                 try {
                     if (dataSourceInfo == null) {
-                        LOGGER.warn(LogMessages.DATASOURCE_NOT_FOUND, datasourceName);
+                        LOGGER.warn("Encountered null datasource info while evaluating layer presence");
                         continue;
                     }
 
