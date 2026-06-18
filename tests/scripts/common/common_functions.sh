@@ -136,6 +136,16 @@ function time_diff() {
 	echo $diffsec
 }
 
+function install_python_requirements() {
+	requirements_file=$1
+	pip_install_log=$2
+
+	echo ""
+	echo "Installing the required python modules..."
+	echo "python3 -m pip install --user -r ${requirements_file} > ${pip_install_log}"
+	python3 -m pip install --user -r "${requirements_file}" > "${pip_install_log}" 2>&1 || err_exit "ERROR: Installing python modules for the test run failed!"
+}
+
 # Set up autotune
 function setup() {
 	KRUIZE_POD_LOG=$1
