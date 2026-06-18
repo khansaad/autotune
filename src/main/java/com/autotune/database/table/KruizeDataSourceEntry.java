@@ -18,10 +18,6 @@ package com.autotune.database.table;
 
 import jakarta.persistence.*;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
 /**
  * This is a Java class named KruizeDataSourceEntry annotated with JPA annotations.
  * It represents a table named kruize_data_source in a relational database.
@@ -46,7 +42,6 @@ public class KruizeDataSourceEntry {
     private String serviceName;
     private String namespace;
     private String url;
-    private String clusters; // Comma-separated cluster names
     @ManyToOne(cascade = CascadeType.PERSIST) // Cascade PERSIST to auto-save authentication entry
     @JoinColumn(name = "authentication_id", nullable = false) // Foreign key column in the datasource table
     private KruizeAuthenticationEntry kruizeAuthenticationEntry;
@@ -105,36 +100,5 @@ public class KruizeDataSourceEntry {
 
     public void setUrl(String url) {
         this.url = url;
-    }
-
-    public String getClusters() {
-        return clusters;
-    }
-
-    public void setClusters(String clusters) {
-        this.clusters = clusters;
-    }
-
-    /**
-     * Get cluster names as a list
-     * @return List of cluster names, empty list if no clusters defined
-     */
-    public List<String> getClusterList() {
-        if (clusters == null || clusters.trim().isEmpty()) {
-            return new ArrayList<>();
-        }
-        return new ArrayList<>(Arrays.asList(clusters.split(",")));
-    }
-
-    /**
-     * Set cluster names from a list
-     * @param clusterList List of cluster names
-     */
-    public void setClusterList(java.util.List<String> clusterList) {
-        if (clusterList == null || clusterList.isEmpty()) {
-            this.clusters = null;
-        } else {
-            this.clusters = String.join(",", clusterList);
-        }
     }
 }
