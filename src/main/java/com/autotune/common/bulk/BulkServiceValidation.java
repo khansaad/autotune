@@ -27,7 +27,6 @@ import org.slf4j.LoggerFactory;
 
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
-import java.util.Set;
 
 /**
  * Utility class that performs validation for bulk service requests.
@@ -45,20 +44,6 @@ import java.util.Set;
 public class BulkServiceValidation {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(BulkServiceValidation.class);
-    
-    // Kubernetes DNS-1123 subdomain validation constants
-    private static final int MAX_CLUSTER_NAME_LENGTH = 253;
-    private static final String CLUSTER_NAME_REGEX = "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$";
-    private static final String CLUSTER_NAME_FORMAT_ERROR =
-            "Invalid cluster_name format. Must be a valid Kubernetes DNS-1123 subdomain: " +
-            "lowercase alphanumeric characters, hyphens, and dots only. " +
-            "Must start and end with alphanumeric.";
-    
-    // Valid recommendation model names
-    private static final Set<String> VALID_MODELS = Set.of("performance", "cost");
-    
-    // Valid recommendation term names
-    private static final Set<String> VALID_TERMS = Set.of("short", "medium", "long");
 
     /**
      * Validates the bulk request payload and returns the corresponding validation output.
@@ -197,7 +182,7 @@ public class BulkServiceValidation {
 
     /**
      * Validates the cluster_name field if provided.
-     * Trims whitespace and checks for:
+     * Checks for:
      * <ul>
      *     <li>Empty string (not allowed)</li>
      *     <li>Length (max 253 characters per Kubernetes DNS-1123 subdomain spec)</li>
@@ -212,21 +197,20 @@ public class BulkServiceValidation {
             return ""; // null is valid (will use metadata cluster)
         }
         
-        // Trim whitespace to handle accidental surrounding spaces
-        String trimmedClusterName = clusterName.trim();
-        
-        if (trimmedClusterName.isEmpty()) {
+        if (clusterName.isEmpty()) {
             return "cluster_name cannot be an empty string. Either provide a valid cluster name or omit the field";
         }
         
-        if (trimmedClusterName.length() > MAX_CLUSTER_NAME_LENGTH) {
-            return "cluster_name is too long (max " + MAX_CLUSTER_NAME_LENGTH + " characters). Provided: " +
-                   trimmedClusterName.length() + " characters";
+        if (clusterName.length() > 253) {
+            return "cluster_name is too long (max 253 characters). Provided: " + clusterName.length() + " characters";
         }
         
-        // Kubernetes DNS-1123 subdomain format validation
-        if (!trimmedClusterName.matches(CLUSTER_NAME_REGEX)) {
-            return CLUSTER_NAME_FORMAT_ERROR + " Provided: " + trimmedClusterName;
+        // Kubernetes DNS-1123 subdomain format: lowercase alphanumeric, hyphens, and dots
+        // Must start and end with alphanumeric
+        if (!clusterName.matches("^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$")) {
+            return "Invalid cluster_name format. Must be a valid Kubernetes DNS-1123 subdomain: " +
+                   "lowercase alphanumeric characters, hyphens, and dots only. " +
+                   "Must start and end with alphanumeric. Provided: " + clusterName;
         }
         
         return "";
@@ -251,8 +235,11 @@ public class BulkServiceValidation {
         
         if (modelSettings.getModels() == null || modelSettings.getModels().isEmpty()) {
             return "model_settings.models cannot be null or empty when model_settings is provided. " +
-                   "Valid model names: " + VALID_MODELS;
+                   "Valid model names: performance, cost";
         }
+        
+        // Valid model names
+        java.util.List<String> validModels = java.util.Arrays.asList("performance", "cost");
         
         for (String model : modelSettings.getModels()) {
             if (model == null || model.trim().isEmpty()) {
@@ -260,8 +247,8 @@ public class BulkServiceValidation {
             }
             
             String modelLower = model.toLowerCase().trim();
-            if (!VALID_MODELS.contains(modelLower)) {
-                return "Invalid model name: '" + model + "'. Valid model names are: " + VALID_MODELS;
+            if (!validModels.contains(modelLower)) {
+                return "Invalid model name: '" + model + "'. Valid model names are: " + validModels;
             }
         }
         
@@ -287,8 +274,11 @@ public class BulkServiceValidation {
         
         if (termSettings.getTerms() == null || termSettings.getTerms().isEmpty()) {
             return "term_settings.terms cannot be null or empty when term_settings is provided. " +
-                   "Valid term names: " + VALID_TERMS;
+                   "Valid term names: short, medium, long";
         }
+        
+        // Valid term names
+        java.util.List<String> validTerms = java.util.Arrays.asList("short", "medium", "long");
         
         for (String term : termSettings.getTerms()) {
             if (term == null || term.trim().isEmpty()) {
@@ -296,8 +286,8 @@ public class BulkServiceValidation {
             }
             
             String termLower = term.toLowerCase().trim();
-            if (!VALID_TERMS.contains(termLower)) {
-                return "Invalid term name: '" + term + "'. Valid term names are: " + VALID_TERMS;
+            if (!validTerms.contains(termLower)) {
+                return "Invalid term name: '" + term + "'. Valid term names are: " + validTerms;
             }
         }
         

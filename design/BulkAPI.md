@@ -59,13 +59,6 @@ progress of the job.
   "datasource": "Cbank1Xyz",
   "metadata_profile": "cluster-metadata-local-monitoring",
   "measurement_duration": "15min",
-  "cluster_name": "production-cluster",
-  "model_settings": {
-    "models": ["performance"]
-  },
-  "term_settings": {
-    "terms": ["long"]
-  },
   "experiment_types": [
     "container",
     "namespace"
@@ -105,20 +98,6 @@ progress of the job.
   should be installed / created before invoking bulk API.
 
 - **measurement_duration:** The historic data duration to fetch the cluster metadata. This is an optional field, if not 
-
-- **cluster_name:** (Optional) The cluster name to use for all experiments created in this bulk job. If provided, this 
-  overrides the cluster name from datasource metadata. If not provided, the cluster name from metadata will be used.
-  Must be a valid Kubernetes DNS-1123 subdomain (lowercase alphanumeric, hyphens, dots, max 253 characters).
-
-- **model_settings:** (Optional) Custom recommendation model settings. If provided, only the specified models will be 
-  used for generating recommendations. If not provided, all default models (performance + cost) will be used.
-    - **models:** Array of model names. Valid values: `"performance"`, `"cost"`
-    - Example: `{"models": ["performance"]}` - generates only performance recommendations
-
-- **term_settings:** (Optional) Custom recommendation term settings. If provided, only the specified terms will be 
-  used for generating recommendations. If not provided, all default terms (short + medium + long) will be used.
-    - **terms:** Array of term names. Valid values: `"short"`, `"medium"`, `"long"`
-    - Example: `{"terms": ["long"]}` - generates only long-term recommendations
   specified `15min` as default measurement_duration value is considered.
 
 ### Success Response
@@ -162,43 +141,6 @@ container or namespace level. Ensure that:
 
 - **`include`** As shown in the example above, it filters out all namespaces starting with the name `openshift-` but
   includes the `openshift-tuning` one. So, we'll create experiments and generate recommendations for
-
-#### 4. **Request Payload with Custom Cluster and Recommendation Settings:**
-
-This example demonstrates how to use the new optional fields to customize cluster name and recommendation generation:
-
-```json
-{
-  "cluster_name": "production-iks-cluster",
-  "model_settings": {
-    "models": ["performance"]
-  },
-  "term_settings": {
-    "terms": ["long"]
-  },
-  "datasource": "prometheus-prod",
-  "metadata_profile": "cluster-metadata-local-monitoring",
-  "measurement_duration": "15min",
-  "filter": {
-    "include": {
-      "namespace": ["production", "staging"]
-    }
-  }
-}
-```
-
-**Behavior:**
-- All experiments will use cluster name `"production-iks-cluster"` instead of the cluster name from datasource metadata
-- Only **performance** recommendations will be generated (no cost recommendations)
-- Only **long-term** recommendations will be generated (no short or medium term)
-- This reduces recommendation generation time and resource usage
-- Useful for IRI (IBM Runtime Intelligence) workflows that only need specific recommendation types
-
-**Use Cases:**
-- **IRI Integration:** When you only need performance and long-term recommendations
-- **Cost Optimization Focus:** Use `{"models": ["cost"]}` to focus only on cost recommendations
-- **Quick Analysis:** Use `{"terms": ["short"]}` for immediate short-term recommendations
-- **Cluster Override:** Specify a meaningful cluster name when metadata cluster name is not descriptive
   the `openshift-tuning` namespace.
 
 ### GET Request:
