@@ -200,6 +200,18 @@ public class DataSourceCollection {
                 String dataSourceURL = dataSourceObject.optString(KruizeConstants.DataSourceConstants.DATASOURCE_URL);
                 LOGGER.info(dataSourceURL);
                 AuthenticationConfig authConfig = getAuthenticationDetails(dataSourceObject, name);
+                
+                // Extract clusters array if present
+                List<String> clusters = new ArrayList<>();
+                if (dataSourceObject.has(KruizeConstants.DataSourceConstants.DataSourceMetadataInfoJSONKeys.CLUSTERS)) {
+                    JSONArray clustersArray = dataSourceObject.optJSONArray(KruizeConstants.DataSourceConstants.DataSourceMetadataInfoJSONKeys.CLUSTERS);
+                    if (clustersArray != null) {
+                        for (int i = 0; i < clustersArray.length(); i++) {
+                            clusters.add(clustersArray.getString(i));
+                        }
+                        LOGGER.info("Clusters for datasource {}: {}", name, clusters);
+                    }
+                }
 
                 // Validate input
                 if (!validateInput(name, provider, serviceName, dataSourceURL, namespace)) { //TODO: add validations for auth
@@ -212,7 +224,7 @@ public class DataSourceCollection {
                     if (!dataSourceURL.isBlank()) {
                         url = new URI(dataSourceURL).toURL();
                     }
-                    dataSourceInfo = new DataSourceInfo(name, provider, serviceName, namespace, url, authConfig);
+                    dataSourceInfo = new DataSourceInfo(name, provider, serviceName, namespace, url, authConfig, clusters);
 
                     // Attempt to add, addDataSource() returns corresponding exception if it fails. Increment the success count otherwise.
                     addDataSource(dataSourceInfo);
