@@ -625,11 +625,7 @@ public class BulkJobManager implements Runnable {
         createExperimentAPIObject.setApiVersion(CREATE_EXPERIMENT_CONFIG_BEAN.getVersion());
         createExperimentAPIObject.setExperimentName(experiment_name);
         createExperimentAPIObject.setDatasource(this.bulkInput.getDatasource());
-        // Use cluster_name from bulk payload if provided, otherwise use metadata cluster
-        String clusterName = (this.bulkInput.getCluster_name() != null && !this.bulkInput.getCluster_name().isEmpty())
-            ? this.bulkInput.getCluster_name()
-            : dsc.getDataSourceClusterName();
-        createExperimentAPIObject.setClusterName(clusterName);
+        createExperimentAPIObject.setClusterName(dsc.getDataSourceClusterName());
         createExperimentAPIObject.setPerformanceProfile(CREATE_EXPERIMENT_CONFIG_BEAN.getPerformanceProfile());
         createExperimentAPIObject.setMetadataProfile(CREATE_EXPERIMENT_CONFIG_BEAN.getMetadataProfile());
         List<KubernetesAPIObject> kubernetesAPIObjectList = new ArrayList<>();
@@ -642,21 +638,8 @@ public class BulkJobManager implements Runnable {
         kubernetesAPIObject.setNamespace(namespace.getNamespace());
         kubernetesAPIObjectList.add(kubernetesAPIObject);
         createExperimentAPIObject.setKubernetesObjects(kubernetesAPIObjectList);
-        
-        // Create recommendation settings with threshold
         RecommendationSettings rs = new RecommendationSettings();
         rs.setThreshold(CREATE_EXPERIMENT_CONFIG_BEAN.getThreshold());
-        
-        // Passthrough model_settings if provided in bulk input
-        if (this.bulkInput.getModel_settings() != null) {
-            rs.setModelSettings(this.bulkInput.getModel_settings());
-        }
-        
-        // Passthrough term_settings if provided in bulk input
-        if (this.bulkInput.getTerm_settings() != null) {
-            rs.setTermSettings(this.bulkInput.getTerm_settings());
-        }
-        
         createExperimentAPIObject.setRecommendationSettings(rs);
         TrialSettings trialSettings = new TrialSettings();
         trialSettings.setMeasurement_durationMinutes(CREATE_EXPERIMENT_CONFIG_BEAN.getMeasurementDurationStr());
