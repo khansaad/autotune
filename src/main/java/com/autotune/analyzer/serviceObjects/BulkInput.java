@@ -15,6 +15,8 @@
  *******************************************************************************/
 package com.autotune.analyzer.serviceObjects;
 
+import com.autotune.analyzer.kruizeObject.ModelSettings;
+import com.autotune.analyzer.kruizeObject.TermSettings;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.List;
 import java.util.Map;
@@ -30,6 +32,27 @@ public class BulkInput {
     private String metadata_profile;
     private String measurement_duration;
     private String requestId; //TODO: to be used for the Kafka consumer case to map requestID with jobID
+    
+    /**
+     * Cluster name to use for all experiments in this bulk job.
+     * If provided, overrides cluster name from datasource metadata.
+     * If not provided, cluster name from metadata will be used.
+     */
+    private String cluster_name;
+    
+    /**
+     * Custom recommendation model settings.
+     * If provided, only specified models will be used for recommendations.
+     * If not provided, all default models (performance + cost) will be used.
+     */
+    private ModelSettings model_settings;
+    
+    /**
+     * Custom recommendation term settings.
+     * If provided, only specified terms will be used for recommendations.
+     * If not provided, all default terms (short + medium + long) will be used.
+     */
+    private TermSettings term_settings;
 
     // Getters and Setters
 
@@ -47,7 +70,7 @@ public class BulkInput {
     @JsonIgnore
     public boolean isEmpty() {
         return (filter == null && time_range == null && measurement_duration == null && metadata_profile == null
-                && datasource == null);
+                && datasource == null && cluster_name == null && model_settings == null && term_settings == null);
     }
 
     public TimeRange getTime_range() {
@@ -89,6 +112,30 @@ public class BulkInput {
     public String getMeasurement_duration() {return measurement_duration;}
 
     public void setMeasurement_duration(String measurement_duration) {this.measurement_duration = measurement_duration;}
+
+    public String getCluster_name() {
+        return cluster_name;
+    }
+
+    public void setCluster_name(String cluster_name) {
+        this.cluster_name = cluster_name;
+    }
+
+    public ModelSettings getModel_settings() {
+        return model_settings;
+    }
+
+    public void setModel_settings(ModelSettings model_settings) {
+        this.model_settings = model_settings;
+    }
+
+    public TermSettings getTerm_settings() {
+        return term_settings;
+    }
+
+    public void setTerm_settings(TermSettings term_settings) {
+        this.term_settings = term_settings;
+    }
 
     // Nested class for FilterWrapper that contains 'exclude' and 'include'
     public static class FilterWrapper {
