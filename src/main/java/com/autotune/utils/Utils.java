@@ -24,6 +24,7 @@ import com.autotune.analyzer.utils.GsonUTCDateAdapter;
 import com.autotune.common.data.metrics.MetricMetadata;
 import com.autotune.common.data.result.ContainerData;
 import com.autotune.common.data.system.info.device.DeviceDetails;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.google.gson.ExclusionStrategy;
 import com.google.gson.FieldAttributes;
 import com.google.gson.Gson;
@@ -39,7 +40,9 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 /**
  * Contains methods that are of general utility in the codebase
@@ -252,5 +255,47 @@ public class Utils {
                 return null;
             }
         }
+    }
+
+    // Maximum length for a single cluster name (mirrors DNS subdomain limit)
+    private static final int MAX_CLUSTER_NAME_LENGTH = 253;
+
+    /**
+     * Parses a JSONB-backed JsonNode (expected to be a JSON array of strings) into a
+     * {@code List<String>}.
+     * <p>
+     * Each element is validated before inclusion:
+     * <ul>
+     *   <li>Must be a non-null textual node</li>
+     *   <li>Cannot be blank after trimming</li>
+     *   <li>Cannot exceed {@value MAX_CLUSTER_NAME_LENGTH} characters</li>
+     * </ul>
+     * Invalid entries are logged and skipped; the method never returns {@code null}.
+     *
+     * @param clustersNode the JsonNode stored in the {@code clusters} JSONB column
+     * @return list of valid cluster-name strings, never {@code null}
+     */
+    public static List<String> parseClusterList(JsonNode clustersNode) {
+        if (clustersNode == null || !clustersNode.isArray()) {
+            return new ArrayList<>();
+        }
+        List<String> result = new ArrayList<>();
+        for (JsonNode node : clustersNode) {
+            if (!node.isTextual()) {
+                LOGGER.warn("Skipping non-textual cluster entry: {}", node);
+                continue;
+            }
+            String name = node.asText().trim();
+            if (name.isEmpty()) {
+                LOGGER.warn("Skipping blank cluster name entry");
+                continue;
+            }
+            if (name.length() > MAX_CLUSTER_NAME_LENGTH) {
+                LOGGER.warn("Skipping cluster name '{}': exceeds max length of {} characters", name, MAX_CLUSTER_NAME_LENGTH);
+                continue;
+            }
+            result.add(name);
+        }
+        return result;
     }
 }
