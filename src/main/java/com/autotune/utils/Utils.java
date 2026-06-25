@@ -276,12 +276,17 @@ public class Utils {
      * @return list of valid cluster-name strings, never {@code null}
      */
     public static List<String> parseClusterList(JsonNode clustersNode) {
-        if (clustersNode == null || !clustersNode.isArray()) {
+        if (clustersNode == null) {
+            LOGGER.warn("clusters JSONB node is null, returning empty list");
+            return new ArrayList<>();
+        }
+        if (!clustersNode.isArray()) {
+            LOGGER.warn("clusters JSONB node is not an array (was: {}), returning empty list", clustersNode.getNodeType());
             return new ArrayList<>();
         }
         List<String> result = new ArrayList<>();
         for (JsonNode node : clustersNode) {
-            if (!node.isTextual()) {
+            if (node == null || !node.isTextual()) {
                 LOGGER.warn("Skipping non-textual cluster entry: {}", node);
                 continue;
             }

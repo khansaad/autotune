@@ -155,11 +155,15 @@ public class DataSourceInfo {
     }
 
     /**
-     * Returns the list of cluster names associated with this datasource
-     * @return List of cluster names, empty list if no clusters defined
+     * Returns the list of cluster names associated with this datasource.
+     * The {@code clusters} field is final and set once at construction time;
+     * all callers only read the list, so returning the same reference is safe
+     * and avoids allocating a new list on every call.
+     *
+     * @return list of cluster names; empty list if no clusters were provided
      */
     public List<String> getClusters() {
-        return new ArrayList<>(clusters);
+        return clusters;
     }
 
     @Override
