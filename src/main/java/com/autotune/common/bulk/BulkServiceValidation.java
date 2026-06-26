@@ -68,6 +68,10 @@ public class BulkServiceValidation {
         validationOutputData = buildErrorOutput(validateTimeRange(payload.getTime_range()), jobID);
         if (validationOutputData != null) return validationOutputData;
 
+        // Validate cluster_name if provided
+        validationOutputData = buildErrorOutput(validateClusterName(payload.getCluster_name()), jobID);
+        if (validationOutputData != null) return validationOutputData;
+
         if (payload.getDatasource() != null) {
             validationOutputData = buildErrorOutput(validateDatasourceConnection(payload.getDatasource()), jobID);
         }
@@ -167,4 +171,27 @@ public class BulkServiceValidation {
         }
         return errorMessage;
     }
+
+    /**
+     * Validates the cluster_name field if provided.
+     * Null is valid since cluster_name is an optional field.
+     * Checks that the name is not blank and does not exceed 253 characters.
+     *
+     * @param clusterName the cluster name to validate (can be null for optional field)
+     * @return an error message if validation fails; otherwise an empty string
+     */
+    public static String validateClusterName(String clusterName) {
+        if (clusterName == null) {
+            return ""; // Optional field
+        }
+        String trimmed = clusterName.trim();
+        if (trimmed.isEmpty()) {
+            return "cluster_name cannot be an empty string";
+        }
+        if (trimmed.length() > 253) {
+            return String.format("cluster_name is too long (max 253 characters, got %d)", trimmed.length());
+        }
+        return "";
+    }
+
 }
