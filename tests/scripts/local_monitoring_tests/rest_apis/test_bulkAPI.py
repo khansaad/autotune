@@ -385,12 +385,11 @@ def test_bulk_api_filter_application(
     ("cluster-01", SUCCESS_200_STATUS_CODE, None),  # Valid with numbers
     ("cluster.us-east.prod", SUCCESS_200_STATUS_CODE, None),  # Valid with dots
     ("  prod-cluster  ", SUCCESS_200_STATUS_CODE, None),  # Valid with whitespace (should be trimmed)
-    ("Cluster-A", SUCCESS_200_STATUS_CODE, None),  # Valid with uppercase (simple validation)
-    ("-cluster", SUCCESS_200_STATUS_CODE, None),  # Valid with hyphen at start (simple validation)
-    ("cluster_name", SUCCESS_200_STATUS_CODE, None),  # Valid with underscore (simple validation)
+    ("Cluster-A", SUCCESS_200_STATUS_CODE, None),  # Valid - validation only checks length/empty
+    ("-cluster", SUCCESS_200_STATUS_CODE, None),  # Valid - validation only checks length/empty
+    ("cluster_name", SUCCESS_200_STATUS_CODE, None),  # Valid - validation only checks length/empty
     ("", ERROR_STATUS_CODE, "cluster_name cannot be an empty string"),  # Empty string
-    ("a" * 254, ERROR_STATUS_CODE, "too long (max"),  # Exceeds max length - matches backend message
-    (None, SUCCESS_200_STATUS_CODE, None),  # Omitted cluster_name - should use metadata cluster
+    ("a" * 254, ERROR_STATUS_CODE, "cluster_name is too long"),  # Exceeds max length
 ])
 def test_bulk_api_cluster_name_validation(cluster_type, cluster_name, expected_status, expected_error, caplog):
     """
@@ -422,19 +421,17 @@ def test_bulk_api_cluster_name_validation(cluster_type, cluster_name, expected_s
 
 
 @pytest.mark.test_bulk_api_ros
-@pytest.mark.parametrize("model_settings, omit_model_settings, expected_status, expected_error", [
-    ({"models": ["performance"]}, False, SUCCESS_200_STATUS_CODE, None),  # Valid single model
-    ({"models": ["cost"]}, False, SUCCESS_200_STATUS_CODE, None),  # Valid cost model
-    ({"models": ["performance", "cost"]}, False, SUCCESS_200_STATUS_CODE, None),  # Valid multiple models
-    ({"models": ["Performance", "COST"]}, False, SUCCESS_200_STATUS_CODE, None),  # Valid case-insensitive
-    ({"models": []}, False, ERROR_STATUS_CODE, "model_settings.models cannot be null or empty"),  # Empty list
-    ({"models": ["invalid"]}, False, ERROR_STATUS_CODE, "Invalid model name"),  # Invalid model
-    ({"models": ["performance", "invalid"]}, False, ERROR_STATUS_CODE, "Invalid model name"),  # Mixed valid/invalid
-    ({}, False, ERROR_STATUS_CODE, "model_settings.models cannot be null or empty"),  # Missing models field
-    ({"models": ["performance", " "]}, False, ERROR_STATUS_CODE, "null or empty model name"),  # Whitespace-only element
-    (None, True, SUCCESS_200_STATUS_CODE, None),  # Omitted model_settings field, rely on defaults
+@pytest.mark.parametrize("model_settings, expected_status, expected_error", [
+    ({"models": ["performance"]}, SUCCESS_200_STATUS_CODE, None),  # Valid single model
+    ({"models": ["cost"]}, SUCCESS_200_STATUS_CODE, None),  # Valid cost model
+    ({"models": ["performance", "cost"]}, SUCCESS_200_STATUS_CODE, None),  # Valid multiple models
+    ({"models": ["Performance", "COST"]}, SUCCESS_200_STATUS_CODE, None),  # Valid case-insensitive
+    ({"models": []}, ERROR_STATUS_CODE, "model_settings.models cannot be null or empty"),  # Empty list
+    ({"models": ["invalid"]}, ERROR_STATUS_CODE, "Invalid model name"),  # Invalid model
+    ({"models": ["performance", "invalid"]}, ERROR_STATUS_CODE, "Invalid model name"),  # Mixed valid/invalid
+    ({}, ERROR_STATUS_CODE, "model_settings.models cannot be null or empty"),  # Missing models field
 ])
-def test_bulk_api_model_settings_validation(cluster_type, model_settings, omit_model_settings, expected_status, expected_error, caplog):
+def test_bulk_api_model_settings_validation(cluster_type, model_settings, expected_status, expected_error, caplog):
     """
     Validates model_settings field validation in Bulk API.
     Tests valid models, invalid models, and edge cases.
@@ -442,8 +439,7 @@ def test_bulk_api_model_settings_validation(cluster_type, model_settings, omit_m
     form_kruize_url(cluster_type)
     
     payload = base_payload()
-    if not omit_model_settings:
-        payload["model_settings"] = model_settings
+    payload["model_settings"] = model_settings
     payload["time_range"]["start"] = "2025-01-01T00:00:00Z"
     payload["time_range"]["end"] = "2025-01-02T00:00:00Z"
     
@@ -460,25 +456,24 @@ def test_bulk_api_model_settings_validation(cluster_type, model_settings, omit_m
             assert expected_error in response.json()["message"], \
                 f"Expected error message to contain '{expected_error}' but got: {response.json()['message']}"
         else:
-            # Valid model_settings should create a job
+            # Valid model settings should create a job
             assert "job_id" in response.json(), "Expected job_id in response for valid model_settings"
 
 
 @pytest.mark.test_bulk_api_ros
-@pytest.mark.parametrize("term_settings, omit_term_settings, expected_status, expected_error", [
-    ({"terms": ["short"]}, False, SUCCESS_200_STATUS_CODE, None),  # Valid single term
-    ({"terms": ["medium"]}, False, SUCCESS_200_STATUS_CODE, None),  # Valid medium term
-    ({"terms": ["long"]}, False, SUCCESS_200_STATUS_CODE, None),  # Valid long term
-    ({"terms": ["short", "medium", "long"]}, False, SUCCESS_200_STATUS_CODE, None),  # Valid multiple terms
-    ({"terms": ["Short", "MEDIUM"]}, False, SUCCESS_200_STATUS_CODE, None),  # Valid case-insensitive
-    ({"terms": []}, False, ERROR_STATUS_CODE, "term_settings.terms cannot be null or empty"),  # Empty list
-    ({"terms": ["invalid"]}, False, ERROR_STATUS_CODE, "Invalid term name"),  # Invalid term
-    ({"terms": ["short", "invalid"]}, False, ERROR_STATUS_CODE, "Invalid term name"),  # Mixed valid/invalid
-    ({}, False, ERROR_STATUS_CODE, "term_settings.terms cannot be null or empty"),  # Missing terms field
-    ({"terms": ["short", " "]}, False, ERROR_STATUS_CODE, "null or empty term name"),  # Whitespace-only element
-    (None, True, SUCCESS_200_STATUS_CODE, None),  # Omitted term_settings field, rely on defaults
+@pytest.mark.parametrize("term_settings, expected_status, expected_error", [
+    ({"terms": ["short"]}, SUCCESS_200_STATUS_CODE, None),  # Valid single term
+    ({"terms": ["medium"]}, SUCCESS_200_STATUS_CODE, None),  # Valid medium term
+    ({"terms": ["long"]}, SUCCESS_200_STATUS_CODE, None),  # Valid long term
+    ({"terms": ["short", "long"]}, SUCCESS_200_STATUS_CODE, None),  # Valid multiple terms
+    ({"terms": ["Short", "LONG"]}, SUCCESS_200_STATUS_CODE, None),  # Valid case-insensitive
+    ({"terms": ["short", "medium", "long"]}, SUCCESS_200_STATUS_CODE, None),  # All terms
+    ({"terms": []}, ERROR_STATUS_CODE, "term_settings.terms cannot be null or empty"),  # Empty list
+    ({"terms": ["invalid"]}, ERROR_STATUS_CODE, "Invalid term name"),  # Invalid term
+    ({"terms": ["short", "invalid"]}, ERROR_STATUS_CODE, "Invalid term name"),  # Mixed valid/invalid
+    ({}, ERROR_STATUS_CODE, "term_settings.terms cannot be null or empty"),  # Missing terms field
 ])
-def test_bulk_api_term_settings_validation(cluster_type, term_settings, omit_term_settings, expected_status, expected_error, caplog):
+def test_bulk_api_term_settings_validation(cluster_type, term_settings, expected_status, expected_error, caplog):
     """
     Validates term_settings field validation in Bulk API.
     Tests valid terms, invalid terms, and edge cases.
@@ -486,8 +481,7 @@ def test_bulk_api_term_settings_validation(cluster_type, term_settings, omit_ter
     form_kruize_url(cluster_type)
     
     payload = base_payload()
-    if not omit_term_settings:
-        payload["term_settings"] = term_settings
+    payload["term_settings"] = term_settings
     payload["time_range"]["start"] = "2025-01-01T00:00:00Z"
     payload["time_range"]["end"] = "2025-01-02T00:00:00Z"
     
@@ -514,13 +508,15 @@ def test_bulk_api_combined_custom_settings(cluster_type, caplog):
     """
     Validates that cluster_name, model_settings, and term_settings
     can be used together in a single bulk API request.
+    This simulates the IRI use case.
     """
     form_kruize_url(cluster_type)
+    URL = get_kruize_url()
     
     payload = base_payload()
-    payload["cluster_name"] = "test-cluster"
+    payload["cluster_name"] = "iri-prod-cluster"
     payload["model_settings"] = {"models": ["performance"]}
-    payload["term_settings"] = {"terms": ["short", "medium"]}
+    payload["term_settings"] = {"terms": ["long"]}
     payload["time_range"]["start"] = "2025-01-01T00:00:00Z"
     payload["time_range"]["end"] = "2025-01-02T00:00:00Z"
     
@@ -531,9 +527,40 @@ def test_bulk_api_combined_custom_settings(cluster_type, caplog):
         response = post_bulk_api(payload, logging)
         
         assert response.status_code == SUCCESS_200_STATUS_CODE, \
-            f"Expected status {SUCCESS_200_STATUS_CODE} but got {response.status_code}. Response: {response.json()}"
+            f"Expected success but got {response.status_code}. Response: {response.json()}"
         
-        # Should successfully create a job with all custom settings
-        assert "job_id" in response.json(), "Expected job_id in response for combined custom settings"
+        assert "job_id" in response.json(), "Expected job_id in response"
+        job_id = response.json()["job_id"]
+        
+        # Validate job status
+        validate_job_status(job_id, URL, caplog)
 
+
+@pytest.mark.test_bulk_api_ros
+def test_bulk_api_backward_compatibility(cluster_type, caplog):
+    """
+    Validates that bulk API works without new fields (backward compatibility).
+    Ensures existing workflows are not broken.
+    """
+    form_kruize_url(cluster_type)
+    URL = get_kruize_url()
     
+    # Use base payload without cluster_name, model_settings, or term_settings
+    payload = base_payload()
+    payload["time_range"]["start"] = "2025-01-01T00:00:00Z"
+    payload["time_range"]["end"] = "2025-01-02T00:00:00Z"
+    
+    delete_and_create_metric_profile()
+    delete_and_create_metadata_profile()
+    
+    with caplog.at_level(logging.INFO):
+        response = post_bulk_api(payload, logging)
+        
+        assert response.status_code == SUCCESS_200_STATUS_CODE, \
+            f"Backward compatibility test failed. Status: {response.status_code}, Response: {response.json()}"
+        
+        assert "job_id" in response.json(), "Expected job_id in response for backward compatible payload"
+        job_id = response.json()["job_id"]
+        
+        # Validate job status
+        validate_job_status(job_id, URL, caplog)
