@@ -48,7 +48,6 @@ Documentation still in progress stay tuned.
 - [Recommendations API](#recommendations-api)
     - Introduction
     - Example Request and Response
-    - Invalid Scenarios
 
 <a name="resource-analysis-terms-and-defaults"></a>
 
