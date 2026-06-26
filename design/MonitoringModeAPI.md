@@ -3233,7 +3233,7 @@ Returns all the results of that experiment
                       },
                       "recommendation_engines": {
                         "cost": {
-                          "pods_count": 27,
+                          "pods_count": 0,
                           "confidence_level": 0.0,
                           "config": {
                             "requests": {
@@ -3362,7 +3362,7 @@ Returns all the results of that experiment
                       },
                       "recommendation_engines": {
                         "cost": {
-                          "pods_count": 27,
+                          "pods_count": 0,
                           "confidence_level": 0.0,
                           "config": {
                             "requests": {
@@ -3411,7 +3411,7 @@ Returns all the results of that experiment
                           "notifications": {}
                         },
                         "performance": {
-                          "pods_count": 27,
+                          "pods_count": 0,
                           "confidence_level": 0.0,
                           "config": {
                             "requests": {
@@ -3612,7 +3612,7 @@ Returns the recommendation at a particular timestamp if it exists
                       },
                       "recommendation_engines": {
                         "cost": {
-                          "pods_count": 27,
+                          "pods_count": 0,
                           "confidence_level": 0.0,
                           "config": {
                             "requests": {
@@ -3661,7 +3661,7 @@ Returns the recommendation at a particular timestamp if it exists
                           "notifications": {}
                         },
                         "performance": {
-                          "pods_count": 27,
+                          "pods_count": 0,
                           "confidence_level": 0.0,
                           "config": {
                             "requests": {
@@ -5838,7 +5838,7 @@ structured and easily interpretable way for users or external systems to access 
                       },
                       "recommendation_engines": {
                         "cost": {
-                          "pods_count": 1,
+                          "pods_count": 0,
                           "confidence_level": 0.0,
                           "config": {
                             "requests": {
@@ -5877,7 +5877,7 @@ structured and easily interpretable way for users or external systems to access 
                           }
                         },
                         "performance": {
-                          "pods_count": 1,
+                          "pods_count": 0,
                           "confidence_level": 0.0,
                           "config": {
                             "requests": {
@@ -6018,7 +6018,7 @@ structured and easily interpretable way for users or external systems to access 
                       },
                       "recommendation_engines": {
                         "cost": {
-                          "pods_count": 1,
+                          "pods_count": 0,
                           "confidence_level": 0.0,
                           "config": {
                             "requests": {
@@ -6057,7 +6057,7 @@ structured and easily interpretable way for users or external systems to access 
                           }
                         },
                         "performance": {
-                          "pods_count": 1,
+                          "pods_count": 0,
                           "confidence_level": 0.0,
                           "config": {
                             "requests": {
@@ -6252,7 +6252,7 @@ structured and easily interpretable way for users or external systems to access 
                       },
                       "recommendation_engines": {
                         "cost": {
-                          "pods_count": 1,
+                          "pods_count": 0,
                           "confidence_level": 0.0,
                           "config": {
                             "requests": {
@@ -6291,7 +6291,7 @@ structured and easily interpretable way for users or external systems to access 
                           }
                         },
                         "performance": {
-                          "pods_count": 1,
+                          "pods_count": 0,
                           "confidence_level": 0.0,
                           "config": {
                             "requests": {
