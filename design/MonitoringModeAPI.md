@@ -6921,10 +6921,7 @@ The response will contain a array of JSON object with the recommendations for th
 
 ### Recommendations API
 
-This is new API endpoint introduced in v0.11 release which is in all aspects similar to existing APIs 
-/updateRecommendations, /listRecommendations (in remote mode) and /generateRecommendations (in local mode). Which means the only difference is 
-in response, `requests` and `limits` are nested under `resources` similar to k8s deployment spec. Other than this, rest 
-all remains exactly same as other existing recommendation API endpoints.
+This is a new API endpoint introduced in the v0.11 release, which is in all respects similar to the existing APIs /updateRecommendations, /listRecommendations (in remote mode), and /generateRecommendations (in local mode). The only difference is in the response: `requests` and `limits` are nested under `resources`, similar to the Kubernetes deployment spec. Other than this, the rest remains exactly the same as the other existing recommendation API endpoints.
 <hr>
 **Request**
 
