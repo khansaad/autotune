@@ -16,7 +16,7 @@
 #
 ### Script to run fault tolerant tests with Kruize in local monitoring mode ##
 #
-
+declare -l api_version
 CURRENT_DIR="$(dirname "$(realpath "$0")")"
 KRUIZE_REPO_PATH="${CURRENT_DIR}/../../../.."
 METRIC_PROFILE_DIR="${KRUIZE_REPO_PATH}/manifests/autotune/performance-profiles"
@@ -37,7 +37,12 @@ KRUIZE_IMAGE="quay.io/kruize/autotune:mvp_demo"
 
 function usage() {
 	echo
-	echo "Usage: -c cluster_type[minikube|openshift] [-i Kruize image] [-r <resultsdir path>]"
+	echo "Usage: -c cluster_type[minikube|openshift] [-i Kruize image] [-r <resultsdir path>] [--api-version=v1|legacy]"
+	echo
+  echo "API Version Parameter:"
+  echo "  --api-version=v1      Use NEW v1 API (/kruize/api/v1/recommendations)"
+  echo "  --api-version=legacy  Use OLD/LEGACY APIs (/updateRecommendations, /generateRecommendations)"
+  echo "  Default: legacy (if no parameter specified)"
 	exit -1
 }
 
@@ -52,9 +57,20 @@ function get_kruize_pod_log() {
 	kubectl logs -f ${kruize_pod} -n ${NAMESPACE} > ${log} 2>&1 &
 }
 
-while getopts c:r:i:t:h gopts
+while getopts c:r:i:t:h:-: gopts
 do
 	case ${gopts} in
+	-)
+    case "${OPTARG}" in
+      api-version=*)
+        api_version=${OPTARG#*=}
+        ;;
+      *)
+        echo "Error: Invalid option --${OPTARG}"
+        usage
+        ;;
+    esac
+    ;;
 	c)
 		CLUSTER_TYPE=${OPTARG}
 		;;
@@ -69,6 +85,12 @@ do
 		;;
 	esac
 done
+
+echo "local_monitoring_fault_tolerant_tests.sh :: api_version = ${api_version}"
+# Set the API version to default if not passed on parameter
+if [ -z "${api_version}" ]; then
+  api_version="legacy"
+fi
 
 if [ -z "${CLUSTER_TYPE}" ]; then
 	usage
@@ -155,14 +177,14 @@ TEST_LOG="${LOG_DIR}/kruize_pod_restart_test.log"
 echo ""
 echo "Running fault tolerant test for kruize on ${CLUSTER_TYPE}" | tee -a ${LOG}
 if [ "${CLUSTER_TYPE}" == "openshift" ]; then
-	echo "python3 kruize_pod_restart_test.py -c ${CLUSTER_TYPE} -a ${SERVER_IP_ADDR} -r ${LOG_DIR} | tee -a  ${TEST_LOG}" | tee -a ${LOG}
-	python3 kruize_pod_restart_test.py -c ${CLUSTER_TYPE} -a ${SERVER_IP_ADDR} -r "${LOG_DIR}" | tee -a  ${TEST_LOG}
+	echo "python3 kruize_pod_restart_test.py -c ${CLUSTER_TYPE} -a ${SERVER_IP_ADDR} -r ${LOG_DIR} --api-version ${api_version} | tee -a  ${TEST_LOG}" | tee -a ${LOG}
+	python3 kruize_pod_restart_test.py -c ${CLUSTER_TYPE} -a ${SERVER_IP_ADDR} -r "${LOG_DIR}" --api-version "${api_version}" | tee -a  ${TEST_LOG}
 	exit_code=$?
 	echo "exit_code = $exit_code"
 
 else
-	echo "python3 kruize_pod_restart_test.py -c ${CLUSTER_TYPE} -r ${LOG_DIR} | tee -a  ${TEST_LOG}" | tee -a ${LOG}
-	python3 kruize_pod_restart_test.py -c ${CLUSTER_TYPE} -r "${LOG_DIR}" | tee -a  ${TEST_LOG}
+	echo "python3 kruize_pod_restart_test.py -c ${CLUSTER_TYPE} -r ${LOG_DIR} --api-version ${api_version} | tee -a  ${TEST_LOG}" | tee -a ${LOG}
+	python3 kruize_pod_restart_test.py -c ${CLUSTER_TYPE} -r "${LOG_DIR}" --api-version "${api_version}" | tee -a  ${TEST_LOG}
 	exit_code=$?
 	echo "exit_code = $exit_code"
 fi
