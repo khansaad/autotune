@@ -113,7 +113,7 @@ do
 	esac
 done
 
-echo "perf_profile_migrartion_test.sh :: api_version = ${api_version}"
+echo "perf_profile_migration_test.sh :: api_version = ${api_version}"
 # Set the API version to default if not passed on parameter
 if [ -z "${api_version}" ]; then
   api_version="legacy"

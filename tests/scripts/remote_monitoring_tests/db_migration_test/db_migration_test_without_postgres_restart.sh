@@ -209,7 +209,7 @@ do
 	          curl -s "http://${SERVER_IP_ADDR}/listRecommendations?experiment_name=${exp_name}&rm=true" > ${reco_json_dir}/${exp_name}_reco.json
 	        fi
 
-		python3 validate_reco_json.py -f ${reco_json_dir}/${exp_name}_reco.json -e ${end_time}
+		python3 validate_reco_json.py -f ${reco_json_dir}/${exp_name}_reco.json -e ${end_time} --api-version ${api_version}
 		if [ $? != 0 ]; then
 			failed=1
 		fi
