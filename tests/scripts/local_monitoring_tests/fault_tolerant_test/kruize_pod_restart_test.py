@@ -54,7 +54,7 @@ def main(argv):
 
     if api_version.lower() == "v1":
         pytest.USE_NEW_API = True
-    else
+    else:
         pytest.USE_NEW_API = False
     print(f"Cluster type = {cluster_type}")
     print(f"Results dir = {results_dir}")
