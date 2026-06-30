@@ -50,6 +50,7 @@ def validate_reco_json(json_file, end_time):
 	cpu = True
 	list_reco_json = json.load(open(json_file))
 
+	print(f"Validating recommendation json {list_reco_json}")
 	# Validate the json values
 	for containers in list_reco_json[0]["kubernetes_objects"][0]["containers"]:
 			actual_container_name = containers["container_name"]
