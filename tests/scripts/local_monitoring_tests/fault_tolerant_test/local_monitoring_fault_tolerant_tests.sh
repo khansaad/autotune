@@ -20,6 +20,7 @@ declare -l api_version
 CURRENT_DIR="$(dirname "$(realpath "$0")")"
 KRUIZE_REPO_PATH="${CURRENT_DIR}/../../../.."
 METRIC_PROFILE_DIR="${KRUIZE_REPO_PATH}/manifests/autotune/performance-profiles"
+LOCAL_MONITORING_TEST_DIR="${KRUIZE_REPO_PATH}/tests/scripts/local_monitoring_tests"
 
 # Source the common functions scripts
 . ${CURRENT_DIR}/../../common/common_functions.sh
@@ -101,6 +102,9 @@ LOG_DIR="${RESULTS_DIR}/local-monitoring-fault-tolerant-test-$(date +%Y%m%d%H%M)
 mkdir -p ${LOG_DIR}
 
 LOG="${LOG_DIR}/local-monitoring-fault-tolerant-test.log"
+PIP_INSTALL_LOG="${LOG_DIR}/pip_install.log"
+
+install_python_requirements "${LOCAL_MONITORING_TEST_DIR}/requirements.txt" "${PIP_INSTALL_LOG}" | tee -a ${LOG}
 
 prometheus_pod_running=$(kubectl get pods --all-namespaces | grep "prometheus-k8s-0")
 if [ "${prometheus_pod_running}" == "" ]; then
