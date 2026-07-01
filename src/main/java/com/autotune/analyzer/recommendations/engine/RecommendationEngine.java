@@ -974,6 +974,17 @@ public class RecommendationEngine implements RecommendationEngineService {
 
                     RecommendationNotification recommendationNotification = new RecommendationNotification(RecommendationConstants.RecommendationNotification.NOTICE_CPU_LIMITS_OPTIMISED);
                     engineNotifications.add(recommendationNotification);
+                } else {
+                    // Threshold exceeded - add provisioning status notification
+                    if (generatedCpuLimit > currentCpuLimitValue) {
+                        // Recommended value is higher than current - under-provisioned
+                        RecommendationNotification recommendationNotification = new RecommendationNotification(RecommendationConstants.RecommendationNotification.NOTICE_CPU_LIMITS_UNDER_PROVISIONED);
+                        engineNotifications.add(recommendationNotification);
+                    } else {
+                        // Recommended value is lower than current - over-provisioned
+                        RecommendationNotification recommendationNotification = new RecommendationNotification(RecommendationConstants.RecommendationNotification.NOTICE_CPU_LIMITS_OVER_PROVISIONED);
+                        engineNotifications.add(recommendationNotification);
+                    }
                 }
             }
         }
@@ -1065,6 +1076,17 @@ public class RecommendationEngine implements RecommendationEngineService {
 
                     RecommendationNotification recommendationNotification = new RecommendationNotification(RecommendationConstants.RecommendationNotification.NOTICE_MEMORY_LIMITS_OPTIMISED);
                     engineNotifications.add(recommendationNotification);
+                } else {
+                    // Threshold exceeded - add provisioning status notification
+                    if (generatedMemLimit > currentMemLimitValue) {
+                        // Recommended value is higher than current - under-provisioned
+                        RecommendationNotification recommendationNotification = new RecommendationNotification(RecommendationConstants.RecommendationNotification.NOTICE_MEMORY_LIMITS_UNDER_PROVISIONED);
+                        engineNotifications.add(recommendationNotification);
+                    } else {
+                        // Recommended value is lower than current - over-provisioned
+                        RecommendationNotification recommendationNotification = new RecommendationNotification(RecommendationConstants.RecommendationNotification.NOTICE_MEMORY_LIMITS_OVER_PROVISIONED);
+                        engineNotifications.add(recommendationNotification);
+                    }
                 }
             }
         }

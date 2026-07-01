@@ -248,6 +248,16 @@ public class RecommendationConstants {
                 RecommendationConstants.RecommendationNotificationMsgConstant.CPU_REQUESTS_OVER_PROVISIONED,
                 RecommendationConstants.RecommendationNotificationTypes.NOTICE
         ),
+        NOTICE_CPU_LIMITS_UNDER_PROVISIONED(
+                RecommendationConstants.NotificationCodes.NOTICE_CPU_LIMITS_UNDER_PROVISIONED,
+                RecommendationConstants.RecommendationNotificationMsgConstant.CPU_LIMITS_UNDER_PROVISIONED,
+                RecommendationConstants.RecommendationNotificationTypes.NOTICE
+        ),
+        NOTICE_CPU_LIMITS_OVER_PROVISIONED(
+                RecommendationConstants.NotificationCodes.NOTICE_CPU_LIMITS_OVER_PROVISIONED,
+                RecommendationConstants.RecommendationNotificationMsgConstant.CPU_LIMITS_OVER_PROVISIONED,
+                RecommendationConstants.RecommendationNotificationTypes.NOTICE
+        ),
         NOTICE_MEMORY_RECORDS_ARE_ZERO(
                 RecommendationConstants.NotificationCodes.NOTICE_MEMORY_RECORDS_ARE_ZERO,
                 RecommendationConstants.RecommendationNotificationMsgConstant.MEMORY_RECORDS_ARE_ZERO,
@@ -276,6 +286,16 @@ public class RecommendationConstants {
         NOTICE_MEMORY_REQUESTS_OVER_PROVISIONED(
                 RecommendationConstants.NotificationCodes.NOTICE_MEMORY_REQUESTS_OVER_PROVISIONED,
                 RecommendationConstants.RecommendationNotificationMsgConstant.MEMORY_REQUESTS_OVER_PROVISIONED,
+                RecommendationConstants.RecommendationNotificationTypes.NOTICE
+        ),
+        NOTICE_MEMORY_LIMITS_UNDER_PROVISIONED(
+                RecommendationConstants.NotificationCodes.NOTICE_MEMORY_LIMITS_UNDER_PROVISIONED,
+                RecommendationConstants.RecommendationNotificationMsgConstant.MEMORY_LIMITS_UNDER_PROVISIONED,
+                RecommendationConstants.RecommendationNotificationTypes.NOTICE
+        ),
+        NOTICE_MEMORY_LIMITS_OVER_PROVISIONED(
+                RecommendationConstants.NotificationCodes.NOTICE_MEMORY_LIMITS_OVER_PROVISIONED,
+                RecommendationConstants.RecommendationNotificationMsgConstant.MEMORY_LIMITS_OVER_PROVISIONED,
                 RecommendationConstants.RecommendationNotificationTypes.NOTICE
         ),
         NOTICE_ACCELERATOR_NOT_SUPPORTED(
@@ -480,6 +500,8 @@ public class RecommendationConstants {
         public static final int NOTICE_CPU_LIMITS_OPTIMISED = 323005;
         public static final int NOTICE_CPU_REQUESTS_UNDER_PROVISIONED = 323006;
         public static final int NOTICE_CPU_REQUESTS_OVER_PROVISIONED = 323007;
+        public static final int NOTICE_CPU_LIMITS_UNDER_PROVISIONED = 323008;
+        public static final int NOTICE_CPU_LIMITS_OVER_PROVISIONED = 323009;
         public static final int SECTION_NOTICE_SUBSECTION_DATA_SUBSYSTEM_CPU_END = 323999;
         public static final int SECTION_NOTICE_SUBSECTION_DATA_SUBSYSTEM_MEMORY_START = 324000;
         public static final int NOTICE_MEMORY_RECORDS_ARE_ZERO = 324001;
@@ -488,6 +510,8 @@ public class RecommendationConstants {
         public static final int NOTICE_MEMORY_LIMITS_OPTIMISED = 324004;
         public static final int NOTICE_MEMORY_REQUESTS_UNDER_PROVISIONED = 324005;
         public static final int NOTICE_MEMORY_REQUESTS_OVER_PROVISIONED = 324006;
+        public static final int NOTICE_MEMORY_LIMITS_UNDER_PROVISIONED = 324007;
+        public static final int NOTICE_MEMORY_LIMITS_OVER_PROVISIONED = 324008;
         public static final int SECTION_NOTICE_SUBSECTION_DATA_SUBSYSTEM_MEMORY_END = 324999;
         public static final int SECTION_NOTICE_SUBSECTION_DATA_SUBSYSTEM_NETWORK_START = 325000;
         public static final int SECTION_NOTICE_SUBSECTION_DATA_SUBSYSTEM_NETWORK_END = 325999;
@@ -756,10 +780,14 @@ public class RecommendationConstants {
         public static final String CPU_LIMITS_OPTIMISED = "Workload is optimised wrt CPU LIMITS, no changes needed";
         public static final String CPU_REQUESTS_UNDER_PROVISIONED = "Workload is under-provisioned for CPU. Kruize recommends increasing CPU allocation.";
         public static final String CPU_REQUESTS_OVER_PROVISIONED = "Workload is over-provisioned for CPU. Kruize recommends reducing CPU allocation to optimize costs.";
+        public static final String CPU_LIMITS_UNDER_PROVISIONED = "Workload is under-provisioned for CPU LIMITS. Kruize recommends increasing CPU limit allocation.";
+        public static final String CPU_LIMITS_OVER_PROVISIONED = "Workload is over-provisioned for CPU LIMITS. Kruize recommends reducing CPU limit allocation to optimize costs.";
         public static final String MEMORY_REQUESTS_OPTIMISED = "Workload is optimised wrt MEMORY REQUESTS, no changes needed";
         public static final String MEMORY_LIMITS_OPTIMISED = "Workload is optimised wrt MEMORY LIMITS, no changes needed";
         public static final String MEMORY_REQUESTS_UNDER_PROVISIONED = "Workload is under-provisioned for Memory. Kruize recommends increasing Memory allocation.";
         public static final String MEMORY_REQUESTS_OVER_PROVISIONED = "Workload is over-provisioned for Memory. Kruize recommends reducing Memory allocation to optimize costs.";
+        public static final String MEMORY_LIMITS_UNDER_PROVISIONED = "Workload is under-provisioned for Memory LIMITS. Kruize recommends increasing Memory limit allocation.";
+        public static final String MEMORY_LIMITS_OVER_PROVISIONED = "Workload is over-provisioned for Memory LIMITS. Kruize recommends reducing Memory limit allocation to optimize costs.";
         public static final String ADDING_RECOMMENDATIONS_TO_DB_FAILED = "Failed to add recommendations to the DB ";
         public static final String ACCELERATOR_RECOMMENDATIONS_AVAILABLE = "Accelerator Recommendations are available";
         public static final String ACCELERATOR_NOT_SUPPORTED = "Accelerator is not supported by kruize";
