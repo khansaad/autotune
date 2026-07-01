@@ -214,7 +214,7 @@ if [ -z "${SERVER_IP_ADDR}" ]; then
 fi
 
 if [ ${kruize_setup} == true ]; then
-	old_perf_profile="../json_files/resource_optimization_openshift_v1.json"
+	old_perf_profile="../json_files/resource_optimization_openshift_v2.json"
 	# Create perf profile using the provided json
 	create_performance_profile ${old_perf_profile}
 	curl -s "http://${SERVER_IP_ADDR}/listPerformanceProfiles" | jq > ${LOG_DIR}/listperf_profile_old.json

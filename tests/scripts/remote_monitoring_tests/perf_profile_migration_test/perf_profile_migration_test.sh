@@ -137,8 +137,8 @@ total_results_count=0
 # Run scalability test to load 10 exps / 15 days data and update Recommendations with previous release
 echo "" | tee -a ${LOG}
 echo "Run scalability test to load 10 exps / 15 days data and update Recommendations with ${kruize_image_prev}" | tee -a ${LOG}
-echo "./run_test.sh -i ${kruize_image_prev} -u ${num_exps} -d ${num_days_of_res} -n ${num_clients} -t ${interval_hours} -q ${query_db_interval} -s ${initial_start_date} -r ${LOG_DIR}/test_logs_10_15days -e ${total_results_count} --api-version=${api_version}" | tee -a ${LOG}
-./run_test.sh -i ${kruize_image_prev} -u ${num_exps} -d ${num_days_of_res} -n ${num_clients} -t ${interval_hours} -q ${query_db_interval} -s ${initial_start_date} -r ${LOG_DIR}/test_logs_10_15days -e ${total_results_count} --api-version=${api_version}
+echo "./run_test.sh -i ${kruize_image_prev} -u ${num_exps} -d ${num_days_of_res} -n ${num_clients} -t ${interval_hours} -q ${query_db_interval} -s ${initial_start_date} -r ${LOG_DIR}/test_logs_10_15days -e ${total_results_count}" | tee -a ${LOG}
+./run_test.sh -i ${kruize_image_prev} -u ${num_exps} -d ${num_days_of_res} -n ${num_clients} -t ${interval_hours} -q ${query_db_interval} -s ${initial_start_date} -r ${LOG_DIR}/test_logs_10_15days -e ${total_results_count}
 echo "" | tee -a ${LOG}
 
 sleep 20
