@@ -288,7 +288,7 @@ public class Utils {
             return new ArrayList<>();
         }
         // LinkedHashSet preserves insertion order while eliminating duplicates
-        Set<String> seen = new LinkedHashSet<>();
+        Set<String> clusters = new LinkedHashSet<>();
         for (JsonNode node : clustersNode) {
             if (node == null || !node.isTextual()) {
                 LOGGER.warn("Skipping non-textual cluster entry: {}", node);
@@ -303,10 +303,10 @@ public class Utils {
                 LOGGER.warn("Skipping cluster name '{}': exceeds max length of {} characters", name, MAX_CLUSTER_NAME_LENGTH);
                 continue;
             }
-            if (!seen.add(name)) {
+            if (!clusters.add(name)) {
                 LOGGER.warn("Skipping duplicate cluster name: '{}'", name);
             }
         }
-        return new ArrayList<>(seen);
+        return new ArrayList<>(clusters);
     }
 }
