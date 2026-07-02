@@ -88,7 +88,7 @@ As part of the release testing, following tests will be executed:
 
 All Release tests have been run against the Kruize release 0.11 image and all tests have passed
 
-Scalability short test - We observed an increase in CPU consumption in Kruize v0.11 with v1 API when compared with v0.11 (legacy API) and v0.10 release only for container experiments.
+Scalability short test - We observed an increase in CPU consumption in Kruize v0.11 with v1 API when compared with v0.11 (legacy API) and v0.10 release only for container experiments. This could be intermittent and needs multiple runs and is not a blocker for the release.
 
 Kruize demos - Test with legacy API works as expected.
 
@@ -102,9 +102,9 @@ Kruize demos - Test with legacy API works as expected.
 | 3 | Fault tolerant test | PASSED | PASSED | |
 | 4 | Stress test (legacy/v1) | PASSED | PASSED | |
 | 5 | Scalability test (short run legacy/v1 API) | PASSED | NA | |
-| 6 | DB Migration test | FAILED (v1 API) | NA | |
+| 6 | DB Migration test | PASSED | NA | There is an issue with backup / restore which needs to be investigated |
 | 7 | Perf Profile Migration test | PASSED | NA | |
-| 8 | Recommendation and box plot values validations |  |  | |
+| 8 | Recommendation and box plot values validations | PASSED | PASSED | |
 | 9 | Local Fault tolerant test | PASSED | PASSED | |
 | 10 | Kruize Local Functional tests (legacy) | TOTAL - 234 , PASSED - 230 / FAILED - 2 / SKIPPED - 2 | TOTAL - 234, PASSED - 228 / FAILED - 4 / SKIPPED - 2 | [Issue 1395](https://github.com/kruize/autotune/issues/1395), [Issue 1273](https://github.com/kruize/autotune/issues/1273), [Issue 1821](https://github.com/kruize/autotune/issues/1821) |
 | 11 | Kruize Local Functional tests (v1) | TOTAL - 234 , PASSED - 224 / FAILED - 8 / SKIPPED - 2 | TOTAL - 234, PASSED - 228 / FAILED - 4 / SKIPPED - 2 | [Issue 1395](https://github.com/kruize/autotune/issues/1395), [Issue 1273](https://github.com/kruize/autotune/issues/1273), [Issue 1821](https://github.com/kruize/autotune/issues/1821) |
