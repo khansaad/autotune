@@ -42,7 +42,9 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Contains methods that are of general utility in the codebase
@@ -269,11 +271,12 @@ public class Utils {
      *   <li>Must be a non-null textual node</li>
      *   <li>Cannot be blank after trimming</li>
      *   <li>Cannot exceed {@value MAX_CLUSTER_NAME_LENGTH} characters</li>
+     *   <li>Must not be a duplicate (case-sensitive; first occurrence is kept)</li>
      * </ul>
-     * Invalid entries are logged and skipped; the method never returns {@code null}.
+     * Invalid or duplicate entries are logged and skipped; the method never returns {@code null}.
      *
      * @param clustersNode the JsonNode stored in the {@code clusters} JSONB column
-     * @return list of valid cluster-name strings, never {@code null}
+     * @return list of valid, deduplicated cluster-name strings, never {@code null}
      */
     public static List<String> parseClusterList(JsonNode clustersNode) {
         if (clustersNode == null) {
@@ -284,7 +287,8 @@ public class Utils {
             LOGGER.warn("clusters JSONB node is not an array (was: {}), returning empty list", clustersNode.getNodeType());
             return new ArrayList<>();
         }
-        List<String> result = new ArrayList<>();
+        // LinkedHashSet preserves insertion order while eliminating duplicates
+        Set<String> seen = new LinkedHashSet<>();
         for (JsonNode node : clustersNode) {
             if (node == null || !node.isTextual()) {
                 LOGGER.warn("Skipping non-textual cluster entry: {}", node);
@@ -299,8 +303,10 @@ public class Utils {
                 LOGGER.warn("Skipping cluster name '{}': exceeds max length of {} characters", name, MAX_CLUSTER_NAME_LENGTH);
                 continue;
             }
-            result.add(name);
+            if (!seen.add(name)) {
+                LOGGER.warn("Skipping duplicate cluster name: '{}'", name);
+            }
         }
-        return result;
+        return new ArrayList<>(seen);
     }
 }
