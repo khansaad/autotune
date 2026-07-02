@@ -1,0 +1,343 @@
+/*******************************************************************************
+ * Copyright (c) 2020, 2022 Red Hat, IBM Corporation and others.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *******************************************************************************/
+package com.autotune.utils;
+
+import com.autotune.common.auth.AuthenticationStrategy;
+import com.autotune.common.auth.AuthenticationStrategyFactory;
+import com.autotune.common.datasource.DataSourceInfo;
+import com.autotune.utils.authModels.APIKeysAuthentication;
+import com.autotune.utils.authModels.BasicAuthentication;
+import com.autotune.utils.authModels.BearerAccessToken;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.ResponseHandler;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.conn.ssl.NoopHostnameVerifier;
+import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.ssl.SSLContexts;
+import org.apache.http.util.EntityUtils;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.net.ssl.SSLContext;
+import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.security.KeyManagementException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+/**
+ * This is generic wrapper class used to retrieve RESTAPI response.
+ * This class support following RESTAPI authentication mode
+ * Basic , Bearer , APIKey , OAUTH2 , MTLS , NO Auth
+ */
+public class GenericRestApiClient {
+    private static final long serialVersionUID = 1L;
+    private static final Logger LOGGER = LoggerFactory.getLogger(GenericRestApiClient.class);
+    private static final AtomicBoolean tlsConfigLogged = new AtomicBoolean(false);
+    private String baseURL;
+    private BasicAuthentication basicAuthentication;
+    private BearerAccessToken bearerAccessToken;
+    private APIKeysAuthentication apiKeysAuthentication;
+    private AuthenticationStrategy authenticationStrategy;
+
+    /**
+     * constructor to set the authentication based on the datasourceInfo object
+     *
+     * @param dataSourceInfo object containing the datasource details
+     */
+    public GenericRestApiClient(DataSourceInfo dataSourceInfo) {
+        // TODO: add partial URL as well as part of this constructor
+        this.authenticationStrategy = AuthenticationStrategyFactory.createAuthenticationStrategy(
+                dataSourceInfo.getAuthenticationConfig());
+    }
+
+    public GenericRestApiClient() {
+    }
+
+    /**
+     * This method appends queryString with baseURL and returns response in JSON using specified authentication.
+     *
+     * @param methodType  Http methods like GET,POST,PATCH etc
+     * @param queryString
+     * @return Json object which contains API response.
+     * @throws IOException
+     */
+    public JSONObject fetchMetricsJson(String methodType, String queryString) throws IOException, NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
+        String jsonResponse;
+        try (CloseableHttpClient httpclient = setupHttpClient()) {
+
+            HttpRequestBase httpRequestBase;
+            if (methodType.equalsIgnoreCase("GET")) {
+                httpRequestBase = new HttpGet(baseURL + URLEncoder.encode(queryString, StandardCharsets.UTF_8));
+            } else {
+                throw new UnsupportedOperationException("Unsupported method type: " + methodType);
+            }
+
+            // Apply authentication
+            applyAuthentication(httpRequestBase);
+
+            LOGGER.debug("Executing Prometheus metrics request: {}", httpRequestBase.getRequestLine());
+
+            // Execute the request and get the HttpResponse
+            HttpResponse response = httpclient.execute(httpRequestBase);
+
+            // Get and print the response code
+            int responseCode = response.getStatusLine().getStatusCode();
+            LOGGER.debug("Response code: {}", responseCode);
+
+            // Get the response body if needed
+            jsonResponse = new StringResponseHandler().handleResponse(response);
+
+            // Parse the JSON response
+            ObjectMapper objectMapper = new ObjectMapper();
+            JsonNode rootNode = objectMapper.readTree(jsonResponse);
+            JsonNode resultNode = rootNode.path("data").path("result");
+            JsonNode warningsNode = rootNode.path("warnings");
+
+            // Check if the result is empty and if there are specific warnings
+            if (resultNode.isArray() && resultNode.size() == 0) {
+                for (JsonNode warning : warningsNode) {
+                    String warningMessage = warning.asText();
+                    if (warningMessage.contains("error reading from server") || warningMessage.contains("Please reduce your request rate")) {
+                        LOGGER.warn("Warning detected: {}", warningMessage);
+                        throw new IOException(warningMessage);
+                    }
+                }
+            }
+        }
+        return new JSONObject(jsonResponse);
+    }
+
+
+    /**
+     * Common method to setup HTTP client with appropriate SSL context.
+     * The SSL context is obtained from the authentication strategy if it provides one,
+     * otherwise uses a default trust-all configuration.
+     *
+     * @return CloseableHttpClient configured with appropriate SSL settings
+     */
+    private CloseableHttpClient setupHttpClient() throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
+        SSLContext sslContext;
+        
+        try {
+            // Get SSL context from authentication strategy (returns null for most auth types)
+            sslContext = (authenticationStrategy != null) ? authenticationStrategy.getSSLContext() : null;
+            
+            if (sslContext != null) {
+                LOGGER.debug("Using custom SSL context from authentication strategy");
+            } else {
+                // Default trust-all configuration when no custom SSL context is provided
+                sslContext = SSLContexts.custom().loadTrustMaterial((chain, authType) -> true).build();
+                LOGGER.debug("Using default trust-all SSL context");
+            }
+        } catch (Exception e) {
+            LOGGER.error("Failed to create SSL context: {}", e.getMessage(), e);
+            throw new KeyManagementException("Failed to setup SSL context: " + e.getMessage(), e);
+        }
+        
+        // Pass null for protocols to use system's default TLS configuration, respecting the system TLS profile and avoiding JVM-specific protocol mapping issues
+        SSLConnectionSocketFactory sslConnectionSocketFactory = new SSLConnectionSocketFactory(
+                sslContext,
+                null,
+                null,
+                NoopHostnameVerifier.INSTANCE) {
+            @Override
+            protected void prepareSocket(javax.net.ssl.SSLSocket socket) throws IOException {
+                super.prepareSocket(socket);
+                // Add handshake listener only to the first socket to log the negotiated protocol
+                if (tlsConfigLogged.compareAndSet(false, true)) {
+                    socket.addHandshakeCompletedListener(event -> {
+                        try {
+                            String protocol = event.getSession().getProtocol();
+                            String cipherSuite = event.getSession().getCipherSuite();
+                            LOGGER.info("TLS Handshake completed - Protocol: {}, Cipher Suite: {}", protocol, cipherSuite);
+                        } catch (Exception e) {
+                            LOGGER.debug("Failed to log TLS handshake details", e);
+                        }
+                    });
+                }
+            }
+        };
+        
+        return HttpClients.custom().setSSLSocketFactory(sslConnectionSocketFactory).build();
+    }
+
+    /**
+     * Common method to apply authentication to the HTTP request.
+     * For mTLS, authentication is handled at the SSL/TLS layer, so no header is set.
+     * For other authentication types, the Authorization header is set.
+     *
+     * @param httpRequestBase the HTTP request (GET, POST, etc.)
+     */
+    private void applyAuthentication(HttpRequestBase httpRequestBase) {
+        if (authenticationStrategy != null) {
+            String authHeader = authenticationStrategy.applyAuthentication();
+            // Only set the Authorization header if it's not null (mTLS returns null)
+            if (authHeader != null) {
+                httpRequestBase.setHeader(KruizeConstants.AuthenticationConstants.AUTHORIZATION, authHeader);
+            }
+        }
+    }
+
+    /**
+     * Method to call the Experiment API (e.g., to create an experiment) using POST request.
+     *
+     * @param payload JSON payload containing the experiment details
+     * @return API response code
+     * @throws IOException
+     */
+    public HttpResponseWrapper callKruizeAPI(String payload) throws IOException, NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
+        HttpResponseWrapper httpResponseWrapper = null;
+        // Create an HTTP client
+        try (CloseableHttpClient httpclient = setupHttpClient()) {
+            // Prepare the HTTP POST request
+            HttpPost httpPost = new HttpPost(baseURL);
+            httpPost.setHeader("Content-Type", "application/json");
+            httpPost.setHeader("Accept", "application/json");
+            // If payload is present, set it in the request body
+            if (payload != null) {
+                StringEntity entity = new StringEntity(payload, StandardCharsets.UTF_8);
+                httpPost.setEntity(entity);
+            }
+            // Execute the request and return the response code
+            try (CloseableHttpResponse response = httpclient.execute(httpPost)) {
+                // Get the status code from the response
+                int responseCode = response.getStatusLine().getStatusCode();
+                LOGGER.debug("Response code: {}", responseCode);
+                if (response.getEntity() != null) {
+                    // Convert response entity to string
+                    String responseBody = EntityUtils.toString(response.getEntity(), "UTF-8");
+                    try {
+                        // Attempt to parse as JSON
+                        JSONObject json = new JSONObject(responseBody);
+                        httpResponseWrapper = new HttpResponseWrapper(responseCode, json);
+                    } catch (JSONException e) {
+                        // If JSON parsing fails, return as plain string
+                        httpResponseWrapper = new HttpResponseWrapper(responseCode, responseBody);
+                    }
+                }
+            }
+        }
+        return httpResponseWrapper;
+    }
+
+    /**
+     * Sends an HTTP GET request to the Kruize API and returns the response wrapped in an {@link HttpResponseWrapper}.
+     *
+     * <p>This method creates an HTTP client, prepares a GET request to the configured base URL,
+     * and sets appropriate headers for JSON communication. It then executes the request, retrieves
+     * the response, and attempts to parse it as JSON. If JSON parsing fails, the response is returned
+     * as a plain string.</p>
+     *
+     * @param payload The request payload (not currently used in this method).
+     * @return An {@link HttpResponseWrapper} containing the response status code and either a JSON object
+     *         or a plain string, depending on the response content.
+     * @throws IOException If an I/O error occurs while executing the request.
+     * @throws NoSuchAlgorithmException If the specified algorithm for SSL context is not available.
+     * @throws KeyStoreException If an issue occurs while initializing the key store.
+     * @throws KeyManagementException If an issue occurs while managing the SSL keys.
+     */
+    public HttpResponseWrapper getKruizeAPI(String payload) throws IOException, NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
+        HttpResponseWrapper httpResponseWrapper = null;
+        // Create an HTTP client
+        try (CloseableHttpClient httpclient = setupHttpClient()) {
+            // Prepare the HTTP POST request
+            HttpGet httpget = new HttpGet(baseURL);
+            httpget.setHeader("Content-Type", "application/json");
+            httpget.setHeader("Accept", "application/json");
+      
+            // Execute the request and return the response code
+            try (CloseableHttpResponse response = httpclient.execute(httpget)) {
+                // Get the status code from the response
+                int responseCode = response.getStatusLine().getStatusCode();
+                LOGGER.debug("Response code: {}", responseCode);
+                if (response.getEntity() != null) {
+                    // Convert response entity to string
+                    String responseBody = EntityUtils.toString(response.getEntity(), "UTF-8");
+                    try {
+                        // Attempt to parse as JSON
+                        JSONObject json = new JSONObject(responseBody);
+                        httpResponseWrapper = new HttpResponseWrapper(responseCode, json);
+                    } catch (JSONException e) {
+                        // If JSON parsing fails, return as plain string
+                        httpResponseWrapper = new HttpResponseWrapper(responseCode, responseBody);
+                    }
+                }
+            }
+        }
+        return httpResponseWrapper;
+    }
+
+
+    public void setBaseURL(String baseURL) {
+        this.baseURL = baseURL;
+    }
+
+    private static class StringResponseHandler implements ResponseHandler<String> {
+        @Override
+        public String handleResponse(HttpResponse response) throws IOException {
+            int status = response.getStatusLine().getStatusCode();
+            if (status >= 200 && status < 300) {
+                HttpEntity entity = response.getEntity();
+                return entity != null ? EntityUtils.toString(entity) : null;
+            } else {
+                throw new ClientProtocolException("Unexpected response status: " + status);
+            }
+        }
+
+
+    }
+
+    public class HttpResponseWrapper {
+        private int statusCode;
+        private Object responseBody;
+
+        public HttpResponseWrapper(int statusCode, Object responseBody) {
+            this.statusCode = statusCode;
+            this.responseBody = responseBody;
+        }
+
+        public int getStatusCode() {
+            return statusCode;
+        }
+
+        public Object getResponseBody() {
+            return responseBody;
+        }
+
+        @Override
+        public String toString() {
+            return "HttpResponseWrapper{" +
+                    "statusCode=" + statusCode +
+                    ", responseBody=" + responseBody +
+                    '}';
+        }
+    }
+}

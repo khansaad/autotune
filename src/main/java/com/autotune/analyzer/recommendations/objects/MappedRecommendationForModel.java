@@ -1,0 +1,81 @@
+package com.autotune.analyzer.recommendations.objects;
+
+import com.autotune.analyzer.recommendations.Config;
+import com.autotune.analyzer.recommendations.RecommendationConfigItem;
+import com.autotune.analyzer.recommendations.RecommendationNotification;
+import com.autotune.analyzer.utils.AnalyzerConstants;
+import com.autotune.utils.KruizeConstants;
+import com.google.gson.annotations.SerializedName;
+
+import java.util.HashMap;
+
+public class MappedRecommendationForModel {
+
+    public MappedRecommendationForModel() {
+        this.podsCount = 0;
+        this.confidence_level = 0.0;
+        this.config = new Config();
+        this.variation = new Config();
+        this.notificationHashMap = new HashMap<>();
+    }
+
+    @SerializedName(KruizeConstants.JSONKeys.PODS_COUNT)
+    private int podsCount;
+    @SerializedName(KruizeConstants.JSONKeys.CONFIDENCE_LEVEL)
+    private double confidence_level;
+    @SerializedName(KruizeConstants.JSONKeys.CONFIG)
+    private Config config;
+    @SerializedName(KruizeConstants.JSONKeys.VARIATION)
+    private Config variation;
+
+    @SerializedName(KruizeConstants.JSONKeys.NOTIFICATIONS)
+    private HashMap<Integer, RecommendationNotification> notificationHashMap;
+
+    public int getPodsCount() {
+        return podsCount;
+    }
+
+    public void setPodsCount(int podsCount) {
+        this.podsCount = podsCount;
+    }
+
+    public double getConfidence_level() {
+        return confidence_level;
+    }
+
+    public void setConfidence_level(double confidence_level) {
+        this.confidence_level = confidence_level;
+    }
+
+    public Config getConfig() {
+        return config;
+    }
+
+    public void setConfig(Config config) {
+        this.config = config;
+    }
+
+    public Config getVariation() {
+        return variation;
+    }
+
+    public void setVariation(Config variation) {
+        this.variation = variation;
+    }
+
+    public HashMap<Integer, RecommendationNotification> getNotificationHashMap() {
+        return notificationHashMap;
+    }
+
+    public void setNotificationHashMap(HashMap<Integer, RecommendationNotification> notificationHashMap) {
+        this.notificationHashMap = notificationHashMap;
+    }
+
+    public void addNotification(RecommendationNotification recommendationNotification) {
+        if (null == this.notificationHashMap)
+            this.notificationHashMap = new HashMap<>();
+        if (null != recommendationNotification)
+            if (!this.notificationHashMap.containsKey(recommendationNotification.getCode()))
+                this.notificationHashMap.put(recommendationNotification.getCode(), recommendationNotification);
+    }
+}

@@ -1,5 +1,6 @@
 package com.autotune.experimentManager.data;
 
+import com.autotune.experimentManager.core.EMIterationManager;
 import com.autotune.experimentManager.exceptions.EMInvalidInstanceCreation;
 import com.autotune.experimentManager.utils.EMUtil.EMExpStatus;
 import com.autotune.experimentManager.utils.EMUtil.EMExpStages;
@@ -10,13 +11,18 @@ public class ExperimentTrialData {
     private String trialResult;
     private String trialResultInfo;
     private String trialResultError;
-    private final EMTrialConfig config;
-    private Deployment currentDeployment;
+    private EMTrialConfig config;
+    private EMIterationManager emIterationManager;
+    private Deployment defaultDeployment;
     private Deployment trailDeployment;
     private EMExpStages currentStage;
     private EMExpStages targetStage;
     private EMExpStatus status;
     private boolean notifyTrialCompletion;
+
+    public EMIterationManager getEmIterationManager() {
+        return emIterationManager;
+    }
 
     public ExperimentTrialData(EMTrialConfig config) throws EMInvalidInstanceCreation {
         if (config == null) {
@@ -27,6 +33,7 @@ public class ExperimentTrialData {
         targetStage = EMExpStages.CREATE_CONFIG;
         this.status = EMExpStatus.CREATED;
         this.notifyTrialCompletion = false;
+        emIterationManager = new EMIterationManager(config.getEmConfigObject().getSettings().getTrialSettings().getIterations());
     }
 
     public String getTrialResult() {
@@ -73,12 +80,12 @@ public class ExperimentTrialData {
         this.targetStage = targetStage;
     }
 
-    public Deployment getCurrentDeployment() {
-        return currentDeployment;
+    public Deployment getDefaultDeployment() {
+        return defaultDeployment;
     }
 
-    public void setCurrentDeployment(Deployment currentDeployment) {
-        this.currentDeployment = currentDeployment;
+    public void setDefaultDeployment(Deployment defaultDeployment) {
+        this.defaultDeployment = defaultDeployment;
     }
 
     public Deployment getTrailDeployment() {

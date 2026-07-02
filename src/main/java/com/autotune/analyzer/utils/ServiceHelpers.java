@@ -16,193 +16,172 @@
 package com.autotune.analyzer.utils;
 
 import com.autotune.analyzer.application.ApplicationDeployment;
-import com.autotune.analyzer.application.ApplicationSearchSpace;
-import com.autotune.analyzer.application.ApplicationServiceStack;
-import com.autotune.analyzer.application.Tunable;
-import com.autotune.analyzer.deployment.AutotuneDeploymentInfo;
-import com.autotune.analyzer.k8sObjects.AutotuneConfig;
-import com.autotune.analyzer.k8sObjects.AutotuneObject;
-import com.autotune.analyzer.k8sObjects.Metric;
-import com.autotune.utils.AnalyzerConstants;
+import com.autotune.analyzer.exceptions.BulkNotSupportedException;
+import com.autotune.analyzer.exceptions.InvalidExperimentType;
+import com.autotune.analyzer.kruizeLayer.KruizeLayer;
+import com.autotune.analyzer.kruizeLayer.utils.LayerUtils;
+import com.autotune.analyzer.kruizeObject.KruizeObject;
+import com.autotune.analyzer.performanceProfiles.PerformanceProfile;
+import com.autotune.analyzer.performanceProfiles.PerformanceProfilesDeployment;
+import com.autotune.analyzer.serviceObjects.ContainerAPIObject;
+import com.autotune.analyzer.serviceObjects.Converters;
+import com.autotune.analyzer.serviceObjects.CreateExperimentAPIObject;
+import com.autotune.analyzer.serviceObjects.KubernetesAPIObject;
+import com.autotune.analyzer.services.CreateExperiment;
+import com.autotune.common.data.result.ContainerData;
+import com.autotune.common.k8sObjects.K8sObject;
+import com.autotune.operator.KruizeDeploymentInfo;
+import com.autotune.utils.KruizeConstants;
+import com.autotune.utils.Utils;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import static com.autotune.analyzer.deployment.AutotuneDeployment.deploymentMap;
+import javax.servlet.http.HttpServletResponse;
+import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+import static com.autotune.operator.KruizeOperator.deploymentMap;
 
 /**
  * Helper functions used by the REST APIs to create the output JSON object
  */
 public class ServiceHelpers {
-	private ServiceHelpers() { }
+    private static final Logger LOGGER = LoggerFactory.getLogger(ServiceHelpers.class);
+    private ServiceHelpers() {
+    }
 
-	/**
-	 * Copy over the details of the experiment from the given Autotune Object to the JSON object provided.
-	 *
-	 * @param experimentJson
-	 * @param autotuneObject
-	 */
-	public static void addExperimentDetails(JSONObject experimentJson, AutotuneObject autotuneObject) {
-		experimentJson.put(AnalyzerConstants.ServiceConstants.EXPERIMENT_NAME, autotuneObject.getExperimentName());
-		experimentJson.put(AnalyzerConstants.AutotuneObjectConstants.DIRECTION, autotuneObject.getSloInfo().getDirection());
-		experimentJson.put(AnalyzerConstants.AutotuneObjectConstants.OBJECTIVE_FUNCTION, autotuneObject.getSloInfo().getObjectiveFunction());
-		experimentJson.put(AnalyzerConstants.AutotuneObjectConstants.SLO_CLASS, autotuneObject.getSloInfo().getSloClass());
-		experimentJson.put(AnalyzerConstants.AutotuneObjectConstants.EXPERIMENT_ID, autotuneObject.getExperimentId());
-		experimentJson.put(AnalyzerConstants.AutotuneObjectConstants.HPO_ALGO_IMPL, autotuneObject.getSloInfo().getHpoAlgoImpl());
-		experimentJson.put(AnalyzerConstants.AutotuneObjectConstants.NAMESPACE, autotuneObject.getNamespace());
-	}
+    /**
+     * Copy over the details of the experiment from the given Autotune Object to the JSON object provided.
+     *
+     * @param experimentJson
+     * @param kruizeObject
+     */
+    public static void addExperimentDetails(JSONObject experimentJson, KruizeObject kruizeObject) {
+        PerformanceProfile performanceProfile = PerformanceProfilesDeployment.performanceProfilesMap
+                .get(kruizeObject.getPerformanceProfile());
+        experimentJson.put(AnalyzerConstants.ServiceConstants.EXPERIMENT_NAME, kruizeObject.getExperimentName());
+        experimentJson.put(AnalyzerConstants.AutotuneObjectConstants.DIRECTION, performanceProfile.getSloInfo().getDirection());
+        experimentJson.put(AnalyzerConstants.AutotuneObjectConstants.OBJECTIVE_FUNCTION, performanceProfile.getSloInfo().getObjectiveFunction());
+        experimentJson.put(AnalyzerConstants.AutotuneObjectConstants.SLO_CLASS, performanceProfile.getSloInfo().getSloClass());
+        experimentJson.put(AnalyzerConstants.AutotuneObjectConstants.EXPERIMENT_ID, kruizeObject.getExperiment_id());
+        experimentJson.put(AnalyzerConstants.AutotuneObjectConstants.HPO_ALGO_IMPL, kruizeObject.getHpoAlgoImpl());
+        experimentJson.put(AnalyzerConstants.AutotuneObjectConstants.NAMESPACE, kruizeObject.getNamespace());
+    }
 
-	/**
-	 * Copy over the array of deployments and the included stack names for the given
-	 * Autotune Object to the JSON Object provided
-	 *
-	 * @param experimentJson JSON object to be updated
-	 * @param autotuneObject
-	 */
-	public static void addDeploymentDetails(JSONObject experimentJson, AutotuneObject autotuneObject) {
-		if (deploymentMap.get(autotuneObject.getExperimentName()).isEmpty()) {
-			return;
-		}
+    /**
+     * Copy over the array of deployments for the given Autotune Object to the JSON Object provided
+     *
+     * @param experimentJson JSON object to be updated
+     * @param kruizeObject
+     */
+    public static void addDeploymentDetails(JSONObject experimentJson, KruizeObject kruizeObject) {
+        if (deploymentMap.get(kruizeObject.getExperimentName()).isEmpty()) {
+            return;
+        }
 
-		JSONArray deploymentArray = new JSONArray();
-		for (String deploymentName : deploymentMap.get(autotuneObject.getExperimentName()).keySet()) {
-			JSONObject deploymentJson = new JSONObject();
-			ApplicationDeployment applicationDeployment = deploymentMap.get(autotuneObject.getExperimentName()).get(deploymentName);
-			deploymentJson.put(AnalyzerConstants.ServiceConstants.DEPLOYMENT_NAME, applicationDeployment.getDeploymentName());
-			deploymentJson.put(AnalyzerConstants.ServiceConstants.NAMESPACE, applicationDeployment.getNamespace());
-			JSONArray stackArray = new JSONArray();
-			if (!applicationDeployment.getApplicationServiceStackMap().isEmpty()) {
-				for (String stackName : applicationDeployment.getApplicationServiceStackMap().keySet()) {
-					ApplicationServiceStack applicationServiceStack = applicationDeployment.getApplicationServiceStackMap().get(stackName);
-					JSONObject stackJson = new JSONObject();
-					stackJson.put(AnalyzerConstants.ServiceConstants.STACK_NAME, stackName);
-					stackJson.put(AnalyzerConstants.ServiceConstants.CONTAINER_NAME, applicationServiceStack.getContainerName());
-					stackArray.put(stackJson);
-				}
-			}
-			deploymentJson.put(AnalyzerConstants.ServiceConstants.STACKS, stackArray);
-			deploymentArray.put(deploymentJson);
-		}
+        JSONArray deploymentArray = new JSONArray();
+        for (String deploymentName : deploymentMap.get(kruizeObject.getExperimentName()).keySet()) {
+            JSONObject deploymentJson = new JSONObject();
+            ApplicationDeployment applicationDeployment = deploymentMap.get(kruizeObject.getExperimentName()).get(deploymentName);
+            deploymentJson.put(AnalyzerConstants.ServiceConstants.DEPLOYMENT_NAME, applicationDeployment.getDeploymentName());
+            deploymentJson.put(AnalyzerConstants.ServiceConstants.NAMESPACE, applicationDeployment.getNamespace());
+            deploymentArray.put(deploymentJson);
+        }
 
-		experimentJson.put(AnalyzerConstants.ServiceConstants.DEPLOYMENTS, deploymentArray);
-	}
+        experimentJson.put(AnalyzerConstants.ServiceConstants.DEPLOYMENTS, deploymentArray);
+    }
 
-	/**
-	 * Copy over the details of the LAYER from the given AutotuneConfig object to the JSON object provided
-	 *
-	 * @param layerJson
-	 * @param autotuneConfig
-	 */
-	public static void addLayerDetails(JSONObject layerJson, AutotuneConfig autotuneConfig) {
-		layerJson.put(AnalyzerConstants.AutotuneConfigConstants.LAYER_ID, autotuneConfig.getLayerId());
-		layerJson.put(AnalyzerConstants.AutotuneConfigConstants.LAYER_NAME, autotuneConfig.getLayerName());
-		layerJson.put(AnalyzerConstants.ServiceConstants.LAYER_DETAILS, autotuneConfig.getDetails());
-		layerJson.put(AnalyzerConstants.AutotuneConfigConstants.LAYER_LEVEL, autotuneConfig.getLevel());
-	}
+    public static void checkForBulk(List<CreateExperimentAPIObject> expList) throws BulkNotSupportedException {
+        if (expList.size() > 1) {
+            throw new BulkNotSupportedException();
+        }
+    }
 
-	/**
-	 * Copy over the tunable details of the TUNABLE provided without adding the query details
-	 *
-	 * @param tunableJson
-	 * @param tunable
-	 */
-	private static void addTunable(JSONObject tunableJson, Tunable tunable) {
-		tunableJson.put(AnalyzerConstants.AutotuneConfigConstants.NAME, tunable.getName());
+    public static List<KruizeObject> normalizeAndValidateExperimentTypes(List<CreateExperimentAPIObject> createExperimentAPIObjects) throws InvalidExperimentType {
+        List<KruizeObject> kruizeExpList = new ArrayList<>();
+        for (CreateExperimentAPIObject createExperimentAPIObject : createExperimentAPIObjects) {
+            createExperimentAPIObject.setExperiment_id(Utils.generateID(createExperimentAPIObject.toString()));
+            createExperimentAPIObject.setStatus(AnalyzerConstants.ExperimentStatus.IN_PROGRESS);
+            // validating the kubernetes objects and experiment type
+            for (KubernetesAPIObject kubernetesAPIObject : createExperimentAPIObject.getKubernetesObjects()) {
+                if (createExperimentAPIObject.isContainerExperiment()) {
+                    createExperimentAPIObject.setExperimentType(AnalyzerConstants.ExperimentType.CONTAINER);
+                    // check if namespace data is also set for container-type experiments
+                    if (null != kubernetesAPIObject.getNamespaceAPIObject()) {
+                        throw new InvalidExperimentType(AnalyzerErrorConstants.APIErrors.CreateExperimentAPI.NAMESPACE_DATA_NOT_NULL_FOR_CONTAINER_EXP);
+                    }
+                    if ((AnalyzerConstants.AUTO.equalsIgnoreCase(createExperimentAPIObject.getMode())
+                            || AnalyzerConstants.RECREATE.equalsIgnoreCase(createExperimentAPIObject.getMode())) &&
+                            AnalyzerConstants.REMOTE.equalsIgnoreCase(createExperimentAPIObject.getTargetCluster())) {
+                        throw new InvalidExperimentType(AnalyzerErrorConstants.APIErrors.CreateExperimentAPI.AUTO_EXP_NOT_SUPPORTED_FOR_REMOTE);
+                    }
+                } else if (createExperimentAPIObject.isNamespaceExperiment()) {
+                    if (null != kubernetesAPIObject.getContainerAPIObjects()) {
+                        throw new InvalidExperimentType(AnalyzerErrorConstants.APIErrors.CreateExperimentAPI.CONTAINER_DATA_NOT_NULL_FOR_NAMESPACE_EXP);
+                    }
+                } else {
+                    LOGGER.debug("Missing container/namespace data from the input json {}", createExperimentAPIObject);
+                }
+            }
+            KruizeObject kruizeObject = Converters.KruizeObjectConverters.convertCreateExperimentAPIObjToKruizeObject(createExperimentAPIObject);
+            if (null != kruizeObject) {
+                kruizeExpList.add(kruizeObject);
+            }
+        }
+        return kruizeExpList;
+    }
 
-		if (tunable.getValueType().equalsIgnoreCase("categorical")) {
-			tunableJson.put(AnalyzerConstants.AutotuneConfigConstants.TUNABLE_CHOICES, tunable.getChoices());
-		} else {
-			tunableJson.put(AnalyzerConstants.AutotuneConfigConstants.UPPER_BOUND, tunable.getUpperBound());
-			tunableJson.put(AnalyzerConstants.AutotuneConfigConstants.LOWER_BOUND, tunable.getLowerBound());
-		}
-		tunableJson.put(AnalyzerConstants.AutotuneConfigConstants.VALUE_TYPE, tunable.getValueType());
-		tunableJson.put(AnalyzerConstants.AutotuneConfigConstants.STEP, tunable.getStep());
-	}
+    public static void detectLayers (CreateExperimentAPIObject validAPIObj) throws Exception {
+        for (KubernetesAPIObject kubernetesAPIObject : validAPIObj.getKubernetesObjects()) {
+            for (ContainerAPIObject containerAPIObject : kubernetesAPIObject.getContainerAPIObjects()) {
+                // detect layers for the container
+                Map<String, KruizeLayer> layers = LayerUtils.detectLayers(containerAPIObject.getContainer_name(),
+                        kubernetesAPIObject.getNamespace(),
+                        validAPIObj.getDatasource()
+                );
+                // Skipping null check as we return atleast an empty map if there are no exceptions
+                if (!layers.isEmpty()) {
+                    containerAPIObject.setLayerMap(layers);
+                }
+            }
+        }
+    }
 
-	/**
-	 * Copy over the details of the TUNABLES of a LAYER from the given AutotuneConfig object to the JSON object provided
-	 * If the sloClass is not null then only copy over the TUNABLE if it matches the sloClass.
-	 *
-	 * @param tunablesArray
-	 * @param autotuneConfig
-	 * @param sloClass
-	 */
-	public static void addLayerTunableDetails(JSONArray tunablesArray, AutotuneConfig autotuneConfig, String sloClass) {
-		for (Tunable tunable : autotuneConfig.getTunables()) {
-			if (sloClass == null || tunable.sloClassList.contains(sloClass)) {
-				JSONObject tunableJson = new JSONObject();
-				addTunable(tunableJson, tunable);
-				String tunableQuery = tunable.getQueries().get(AutotuneDeploymentInfo.getMonitoringAgent());
-				String query = AnalyzerConstants.NONE;
-				if (tunableQuery != null && !tunableQuery.isEmpty()) {
-					query = tunableQuery;
-				}
-				tunableJson.put(AnalyzerConstants.ServiceConstants.QUERY_URL, query);
-				tunablesArray.put(tunableJson);
-			}
-		}
-	}
+    public static class KruizeObjectOperations {
+        private KruizeObjectOperations() {
 
-	/**
-	 * Copy over the details of the user specified function variables from the given autotune object to the JSON object provided
-	 *
-	 * @param funcVarJson
-	 * @param autotuneObject
-	 */
-	public static void addFunctionVariablesDetails(JSONObject funcVarJson, AutotuneObject autotuneObject) {
-		// Add function_variables info
-		JSONArray functionVariablesArray = new JSONArray();
-		for (Metric functionVariable : autotuneObject.getSloInfo().getFunctionVariables()) {
-			JSONObject functionVariableJson = new JSONObject();
-			functionVariableJson.put(AnalyzerConstants.AutotuneObjectConstants.NAME, functionVariable.getName());
-			functionVariableJson.put(AnalyzerConstants.AutotuneObjectConstants.VALUE_TYPE, functionVariable.getValueType());
-			functionVariableJson.put(AnalyzerConstants.ServiceConstants.QUERY_URL, functionVariable.getQuery());
-			functionVariablesArray.put(functionVariableJson);
-		}
-		funcVarJson.put(AnalyzerConstants.AutotuneObjectConstants.FUNCTION_VARIABLES, functionVariablesArray);
-	}
+        }
 
-	/**
-	 * Copy over the details of the SearchSpace from the given Autotune object to the JSON object provided.
-	 * The searchSpace will be specific to a pod as provided.
-	 *
-	 * @param outputJsonArray
-	 * @param applicationSearchSpace
-	 */
-	public static void addApplicationToSearchSpace(JSONArray outputJsonArray, ApplicationSearchSpace applicationSearchSpace) {
-		if (applicationSearchSpace == null) {
-			return;
-		}
+        public static boolean checkRecommendationTimestampExists(KruizeObject kruizeObject, String timestamp) {
+            boolean timestampExists = false;
+            try {
+                if (!Utils.DateUtils.isAValidDate(KruizeConstants.DateFormats.STANDARD_JSON_DATE_FORMAT, timestamp)) {
+                    return false;
+                }
+                Date medDate = Utils.DateUtils.getDateFrom(KruizeConstants.DateFormats.STANDARD_JSON_DATE_FORMAT, timestamp);
+                if (null == medDate) {
+                    return false;
+                }
+                Timestamp givenTimestamp = new Timestamp(medDate.getTime());
+                for (K8sObject k8sObject : kruizeObject.getKubernetes_objects()) {
+                    for (ContainerData containerData : k8sObject.getContainerDataMap().values()) {
+                        for (Timestamp key : containerData.getContainerRecommendations().getData().keySet()) {
+                            if (key.equals(givenTimestamp)) {
+                                timestampExists = true;
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
 
-		JSONObject applicationJson = new JSONObject();
-		applicationJson.put(AnalyzerConstants.ServiceConstants.EXPERIMENT_NAME, applicationSearchSpace.getExperimentName());
-		applicationJson.put(AnalyzerConstants.AutotuneObjectConstants.DIRECTION, applicationSearchSpace.getDirection());
-		applicationJson.put(AnalyzerConstants.AutotuneObjectConstants.OBJECTIVE_FUNCTION, applicationSearchSpace.getObjectiveFunction());
-		applicationJson.put(AnalyzerConstants.AutotuneObjectConstants.EXPERIMENT_ID, applicationSearchSpace.getExperimentId());
-		applicationJson.put(AnalyzerConstants.AutotuneObjectConstants.HPO_ALGO_IMPL, applicationSearchSpace.getHpoAlgoImpl());
-		applicationJson.put(AnalyzerConstants.AutotuneObjectConstants.VALUE_TYPE, applicationSearchSpace.getValueType());
-
-		JSONArray tunablesJsonArray = new JSONArray();
-		if (!applicationSearchSpace.getTunablesMap().isEmpty()) {
-			for (String applicationTunableName : applicationSearchSpace.getTunablesMap().keySet()) {
-				Tunable tunable = applicationSearchSpace.getTunablesMap().get(applicationTunableName);
-				JSONObject tunableJson = new JSONObject();
-				// Pass the full name here that includes the layer and stack names
-				tunableJson.put(AnalyzerConstants.AutotuneConfigConstants.NAME, tunable.getFullName());
-				// searchSpace is passing only the tunable value and not a string
-				tunableJson.put(AnalyzerConstants.AutotuneConfigConstants.VALUE_TYPE, tunable.getValueType());
-				// check the tunable type and if it's categorical then we need to add the list of the values else we'll take the upper, lower bound values
-				if (tunable.getValueType().equalsIgnoreCase("categorical")) {
-					tunableJson.put(AnalyzerConstants.AutotuneConfigConstants.TUNABLE_CHOICES,tunable.getChoices());
-				} else {
-					tunableJson.put(AnalyzerConstants.AutotuneConfigConstants.LOWER_BOUND, tunable.getLowerBoundValue());
-					tunableJson.put(AnalyzerConstants.AutotuneConfigConstants.UPPER_BOUND, tunable.getUpperBoundValue());
-				}
-				tunableJson.put(AnalyzerConstants.AutotuneConfigConstants.STEP, tunable.getStep());
-				tunablesJsonArray.put(tunableJson);
-			}
-		}
-
-		applicationJson.put(AnalyzerConstants.AutotuneConfigConstants.TUNABLES, tunablesJsonArray);
-		outputJsonArray.put(applicationJson);
-	}
+            return timestampExists;
+        }
+    }
 }

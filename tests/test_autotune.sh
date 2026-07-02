@@ -22,30 +22,27 @@ SCRIPTS_DIR="${CURRENT_DIR}/scripts"
 # Source the common functions scripts
 . ${SCRIPTS_DIR}/common/common_functions.sh
 
-hpo_option=""
+# Source the test suite scripts
+. ${SCRIPTS_DIR}/remote_monitoring_tests/remote_monitoring_tests.sh
+. ${SCRIPTS_DIR}/local_monitoring_tests/local_monitoring_tests.sh
+. ${SCRIPTS_DIR}/local_monitoring_tests/authentication_tests.sh
+. ${SCRIPTS_DIR}/local_monitoring_tests/datasource_tests.sh
+
+
+resultsdir="${CURRENT_DIR}"
 
 # usage of the test script
-function usage() { 
+function usage() {
 	echo ""
-	echo "Usage: $0 -c [minikube] -k kurl -r [location of benchmarks] [-i autotune image] [-o autotune optuna image] [--tctype=functional|system] [--testmodule=Autotune module to be tested] [--testsuite=Group of tests that you want to perform] [--testcase=Particular test case that you want to check] [-u user] [-p password] [-n namespace] [--resultsdir=results directory] [--hpo specifying this flag starts the HPO service]"
+	echo "Usage: $0 -c [minikube] [-t terminate or cleanup kruize] [-i autotune image] [-o [operator image]] [--testsuite=Group of tests that you want to perform] [--testcase=Particular test case that you want to check] [--resultsdir=results directory] [--skipsetup specifying this flag skips autotune setup] [--cleanup_prometheus specifying this flag along with -t option cleans up prometheus setup] [--api-version=API version to use (v1 or legacy)]"
 	echo ""
-	echo "Example: $0 -c minikube --tctype=functional --testsuite=app_autotune_yaml_tests --testcase=slo_class -r /home/benchmarks --resultsdir=/home/results"
-	echo "Example: $0 -c minikube --testmodule=hpo -r /home/benchmarks --resultsdir=/home/results"
+	echo "Example: $0 -c minikube --testsuite=remote_monitoring_tests --resultsdir=/home/results"
+	echo "Example: $0 -c minikube --testsuite=local_monitoring_tests -o"
+	echo "Example: $0 -c minikube --testsuite=local_monitoring_tests -o quay.io/kruize/kruize_operator:latest"
+	echo "Example: $0 -c minikube --testsuite=remote_monitoring_tests --api-version=legacy"
 	echo ""
-	test_module_usage
 	test_suite_usage
 	echo ""
-	exit -1
-}
-
-# List of testmodules supported
-# output: Display the names of the supported test module
-function test_module_usage() {
-	echo "Supported Test modules are:"
-	for array in "${TEST_MODULE_ARRAY[@]}"
-	do
-		echo "		           ${array}"
-	done
 	exit -1
 }
 
@@ -69,33 +66,12 @@ function check_cluster_type() {
 		usage
 	fi
 	case "${cluster_type}" in
-	minikube)
+    minikube|openshift|kind)
 		;;
-	*)
-		echo "Error: Cluster type **${cluster_type}** is not supported  "
-		usage
+	  *)
+      echo "Error: Cluster type **${cluster_type}** is not supported  "
+      usage
 	esac
-}
-
-# check if the specified testmodule type exists
-# input: testmodule
-# output: if the specified test module is supported or not 
-function check_testmodule_type() {
-	for tm in ${TEST_MODULE_ARRAY[@]}
-	do
-		if [ "${testmodule}" == "${tm}" ]; then
-			matched=1
-		fi
-	done
-	
-	if [ "${testmodule}" == "help" ]; then
-		test_module_usage
-	fi
-	
-	if [ "${matched}" -eq "0" ]; then
-		echo "Error: Invalid testmodule **${testmodule}** "
-		test_module_usage
-	fi
 }
 
 # check if the specified testsuite type exists
@@ -119,33 +95,12 @@ function check_testsuite_type() {
 	fi
 }
 
-# Check the test type 
-# input: test type
-# output: If test type is not supported then stop the test
-function check_testcase_type() {
-	case "${tctype}" in
-	functional|system)
-		;;
-	*)
-		echo "Error: Test case type **${tctype}** is not supported"
-		exit -1
-	esac
-}
-
 # Iterate through the commandline options
-while getopts c:ti:k:n:p:su:r:y:o:-: gopts
+while getopts c:ti:os:-: gopts
 do
 	case ${gopts} in
 	-)
 		case "${OPTARG}" in
-			tctype=*)
-				tctype=${OPTARG#*=}
-				check_testcase_type
-				;;
-			testmodule=*)
-				testmodule=${OPTARG#*=}
-				check_testmodule_type
-				;;
 			testsuite=*)
 				testsuite=${OPTARG#*=}
 				check_testsuite_type
@@ -153,14 +108,27 @@ do
 			testcase=*)
 				testcase=${OPTARG#*=}
 				;;
+			servicename=*)
+      			servicename=${OPTARG#*=}
+        		;;
+			datasource_namespace=*)
+				datasource_namespace=${OPTARG#*=}
+				;;
 			resultsdir=*)
 				resultsdir=${OPTARG#*=}
 				;;
-			hpo)
-				hpo_option="--hpo"
-				echo "hpo_option = $hpo_option"
+		  api-version=*)
+				api_version=${OPTARG#*=}
 				;;
-
+			skipsetup)
+				skip_setup=1
+				;;
+			cleanup_prometheus)
+				cleanup_prometheus=1
+				;;
+			operator-image=*)
+				KRUIZE_OPERATOR_IMAGE=${OPTARG#*=}
+				;;
 		esac
 		;;
 	c)
@@ -170,28 +138,23 @@ do
 		setup=0
 		;;
 	i)
-		AUTOTUNE_DOCKER_IMAGE="${OPTARG}"		
+		KRUIZE_DOCKER_IMAGE="${OPTARG}"
 		;;
 	o)
-		OPTUNA_DOCKER_IMAGE="${OPTARG}"
-		;;
-	k)
-		kurl="${OPTARG}"
-		;;
-	n)
-		autotune_ns="${OPTARG}"
-		;;
-	p)
-		password="${OPTARG}"
+		USE_OPERATOR=1
+		# Check if next argument exists and doesn't start with '-'
+		# If so, treat it as the operator image
+		if [ ! -z "${!OPTIND}" ] && [[ "${!OPTIND}" != -* ]]; then
+			KRUIZE_OPERATOR_IMAGE="${!OPTIND}"
+			OPTIND=$((OPTIND + 1))
+		else
+			KRUIZE_OPERATOR_IMAGE=""
+		fi
+		export USE_OPERATOR
+		export KRUIZE_OPERATOR_IMAGE
 		;;
 	s)
 		setup=1
-		;;
-	u)
-		user="${OPTARG}"
-		;;
-	r)
-		APP_REPO="${OPTARG}"
 		;;
 	[?])
 		usage
@@ -201,11 +164,6 @@ done
 # Check if the cluster type is supported
 check_cluster_type
 
-# Set the testcase type to default if it is not specified 
-if [ -z "${tctype}" ]; then
-	tctype="functional"
-fi
-
 # It is necessary to pass testsuite name when testcase is specified
 if [ ! -z "${testcase}" ]; then
 	if [ -z "${testsuite}" ]; then
@@ -214,37 +172,68 @@ if [ ! -z "${testcase}" ]; then
 	fi
 fi
 
-if [ -z "${AUTOTUNE_DOCKER_IMAGE}" ]; then
-	AUTOTUNE_DOCKER_IMAGE="${AUTOTUNE_IMAGE}"
-fi
-
-if [ -z "${OPTUNA_DOCKER_IMAGE}" ]; then
-	OPTUNA_DOCKER_IMAGE="${OPTUNA_IMAGE}"
-fi
-
-# check for benchmarks directory path
-if [ -z "${APP_REPO}" ]; then
-	echo "Error: Do specify the benchmarks directory path"
-	usage
-else
-	if [ ! -d "${APP_REPO}" ]; then
-		echo "Error: benchmark directory does not exists"
-		usage
+# It is necessary to pass datasource namespace when servicename is specified
+if [ ! -z "${servicename}" ]; then
+	if [ -z "${datasource_namespace}" ]; then
+		echo "Error: Do specify the datasource namespace"
+		exit -1
 	fi
 fi
+
+# Set the API version environment variable if specified
+if [ -n "${api_version}" ]; then
+	case "${api_version}" in
+		v1|V1)
+			export USE_NEW_RECOMMENDATION_API=true
+			echo "Using NEW API (v1): /kruize/api/v1/recommendations"
+			;;
+		legacy|LEGACY|old|OLD)
+			export USE_NEW_RECOMMENDATION_API=false
+			echo "Using OLD/LEGACY APIs: /updateRecommendations, /generateRecommendations, /listRecommendations"
+			;;
+		*)
+			echo "Error: Invalid API version '${api_version}'. Valid values are: v1, legacy"
+			exit -1
+			;;
+	esac
+else
+	# Default to old/legacy API if no parameter specified
+	export USE_NEW_RECOMMENDATION_API=false
+	echo "Using default OLD/LEGACY APIs: /updateRecommendations, /generateRecommendations, /listRecommendations"
+fi
+
+# Set the root for result directory
+RESULTS_ROOT_DIR="${resultsdir}/kruize_test_results"
+mkdir -p ${RESULTS_ROOT_DIR}
+
+# create the result directory with a time stamp
+RESULTS="${RESULTS_ROOT_DIR}/kruize_${testsuite}_$(date +%Y%m%d-%H%M%S)"
+mkdir -p "${RESULTS}"
 
 if [ "${setup}" -ne "0" ]; then
 	# Call the proper setup function based on the cluster_type
-	echo -n "############# Performing ${tctype} test for autotune #############"
-	${SCRIPTS_DIR}/${tctype}_tests.sh --cluster_type=${cluster_type} --tctype=${tctype} --testmodule=${testmodule} --testsuite=${testsuite} --testcase=${testcase} --resultsdir=${resultsdir} -i ${AUTOTUNE_DOCKER_IMAGE} -o ${OPTUNA_DOCKER_IMAGE} -r ${APP_REPO} ${hpo_option}
-	TEST_RESULT=$?
+	echo -n "############# Performing tests for Kruize #############"
+
+	# Perform the specific testsuite if specified
+	if [ ! -z "${testsuite}" ]; then
+        	${testsuite} > >(tee "${RESULTS}/${testsuite}.log") 2>&1
+	fi
+
+	echo ""
+	echo "*********************************************************************************"
+	echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Overall summary of the tests ~~~~~~~~~~~~~~~~~~~~~~~"
+	overallsummary  ${FAILED_TEST_SUITE}
+	echo ""
+	echo "*********************************************************************************"
+
+	if [ "${TOTAL_TESTS_FAILED}" -ne "0" ]; then
+        	exit 1
+	else
+        	exit 0
+	fi
+
 	echo "########################################################################"
 	echo ""
-	if [ "${TEST_RESULT}" -ne "0" ]; then
-		exit 1
-	else
-		exit 0
-	fi
 else
-	autotune_cleanup "${resultsdir}"
+	autotune_cleanup
 fi

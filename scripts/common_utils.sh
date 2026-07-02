@@ -18,41 +18,67 @@
 ###############################  utilities  #################################
 
 function check_running() {
-	
-	check_pod=$1
-	prometheus_ns="monitoring"
-	kubectl_cmd="kubectl -n ${prometheus_ns}"
 
-	echo "Info: Waiting for ${check_pod} to come up..."
+	check_pod=$1
+	check_pod_ns=$2
+	ignore_ui_pod=$3
+	ignore_db_pod=$4
+	kubectl_cmd="kubectl -n ${check_pod_ns}"
+
+	echo "Info: Waiting for ${check_pod} to come up....."
 	err_wait=0
-	while true;
-	do
+	counter=0
+	while true; do
 		sleep 2
-		${kubectl_cmd} get pods | grep ${check_pod}
-		pod_stat=$(${kubectl_cmd} get pods | grep ${check_pod} | awk '{ print $3 }')
-		case "${pod_stat}" in
-			"Running")
-				echo "Info: ${check_pod} deploy succeeded: ${pod_stat}"
-				err=0
-				break;
-				;;
-			"Error")
-				# On Error, wait for 10 seconds before exiting.
-				err_wait=$(( err_wait + 1 ))
-				if [ ${err_wait} -gt 5 ]; then
-					echo "Error: ${check_pod} deploy failed: ${pod_stat}"
-					err=-1
-					break;
-				fi
-				;;
-			*)
-				sleep 2
-				;;
-		esac
+		if [[ ${ignore_ui_pod} == "" || ${ignore_db_pod} == "" ]]; then
+			pod_list=$(${kubectl_cmd} get pods | grep ${check_pod})
+		else
+			pod_list=$(${kubectl_cmd} get pods | grep ${check_pod} | grep -v "${ignore_ui_pod}" | grep -v "${ignore_db_pod}")
+		fi
+		if [[ -z "${pod_list}" ]]; then
+		  echo "Error: No pods found matching ${check_pod}"
+		  err=-1
+		  break
+		fi
+		pod_stat=$(echo "${pod_list}" | awk '{ print $3 }')
+		not_running_count=$(echo "${pod_list}" | awk '$3 != "Running" {count++} END {print count+0}')
+		error_count=$(echo "${pod_list}" | awk '$3 == "Error" {count++} END {print count+0}')
+
+		if [[ "${not_running_count}" == "0" ]]; then
+			echo "Info: ${check_pod} deploy succeeded:"
+			echo "${pod_list}"
+			err=0
+			break
+		elif [[ "${error_count}" != "0" ]]; then
+			# On Error, wait for 10 seconds before exiting.
+			err_wait=$((err_wait + 1))
+			if [ ${err_wait} -gt 5 ]; then
+				echo "Error: ${check_pod} deploy failed:"
+				echo "${pod_list}"
+				err=-1
+				break
+			fi
+		else
+			sleep 2
+			if [ $counter == 200 ]; then
+				${kubectl_cmd} get pods | grep "${check_pod}"
+				echo "ERROR: ${check_pod} Pods failed to come up!"
+				exit -1
+			fi
+			((counter++))
+		fi
 	done
 
 	${kubectl_cmd} get pods | grep ${check_pod}
 	echo
+}
+
+function check_kustomize() {
+	kubectl_tool=$(which kubectl)
+	check_err "Error: Please install the kubectl tool"
+	# Check to see if kubectl supports kustomize
+	kubectl --help | grep "kustomize" >/dev/null
+	check_err "Error: Please install a newer version of kubectl tool that supports the kustomize option (>=v1.12)"
 }
 
 # Check error code from last command, exit on error
@@ -62,4 +88,109 @@ check_err() {
 		echo "$*"
 		exit -1
 	fi
+}
+
+# Deploy kruize in remote monitoring mode with the specified docker image
+kruize_crc_start() {
+	kubectl_cmd="kubectl -n ${autotune_ns}"
+	# Preserve original cluster_type
+	manifest_cluster_type="${cluster_type}"
+
+	# Normalize for manifest reuse
+	if [ "${cluster_type}" = "kind" ]; then
+		manifest_cluster_type="minikube"
+	fi
+	CRC_MANIFEST_FILE_OLD="${CRC_DIR}/${manifest_cluster_type}/kruize_${manifest_cluster_type}.yaml"
+
+	echo "use yaml build - $use_yaml_build"
+	if [ ${use_yaml_build} -eq 0 ]; then
+		cp ${CRC_MANIFEST_FILE} ${CRC_MANIFEST_FILE_OLD}
+		awk -v image_name=${AUTOTUNE_DOCKER_IMAGE} -v ui_image_name=${KRUIZE_UI_DOCKER_IMAGE} '{
+				if ($2=="name:") {
+					prev=$3;
+					print
+				} else if ($1=="image:" && prev=="kruize") {
+					$2=image_name;
+					printf"          %s %s\n", $1, $2;
+				} else if ($1=="image:" && prev=="kruize-ui-nginx-container") {
+					$2=ui_image_name;
+					printf"          %s %s\n", $1, $2;
+				} else { print }
+			 }' ${CRC_MANIFEST_FILE_OLD} >${CRC_MANIFEST_FILE}
+	fi
+
+	${kubectl_cmd} apply -f ${CRC_MANIFEST_FILE}
+	check_running kruize ${autotune_ns} kruize-ui kruize-db
+	if [ "${err}" != "0" ]; then
+		# Indicate deploy failed on error
+		exit 1
+	fi
+
+	if [ ${use_yaml_build} -eq 0 ]; then
+		cp ${CRC_MANIFEST_FILE_OLD} ${CRC_MANIFEST_FILE}
+		rm ${CRC_MANIFEST_FILE_OLD}
+	fi
+}
+
+deploy_crc_common() {
+	# Default namespace handling
+	if [ -z "$autotune_ns" ]; then
+		case "$cluster_type" in
+			openshift)
+				autotune_ns="openshift-tuning"
+				;;
+			*)
+				autotune_ns="monitoring"
+				;;
+		esac
+	fi
+
+	kubectl create namespace "${autotune_ns}" 2>/dev/null || true
+
+	# cluster-specific prometheus checks:
+	case "$cluster_type" in
+		minikube)
+			check_prometheus_installation
+			;;
+		kind)
+			check_prometheus_installation_on_kind
+			;;
+		openshift)
+			check_openshift_prometheus_installation
+			;;
+		*)
+			echo "ERROR: Unknown cluster type '$cluster_type'"
+			exit 1
+			;;
+	esac
+
+	# Manifest selection by cluster type
+	case "$cluster_type" in
+		openshift)
+			CRC_MANIFEST_FILE="${KRUIZE_CRC_DEPLOY_MANIFEST_OPENSHIFT}"
+			;;
+		*)
+			CRC_MANIFEST_FILE="${KRUIZE_CRC_DEPLOY_MANIFEST_MINIKUBE}"
+			;;
+	esac
+
+	kruize_crc_start
+}
+
+# terminate_crc_common cluster_type namespace manifest
+terminate_crc_common() {
+	CRC_MANIFEST_FILE=$1
+	if [ -z "$autotune_ns" ]; then
+		case "$cluster_type" in
+			openshift)
+				autotune_ns="${AUTOTUNE_OPENSHIFT_NAMESPACE}"
+				;;
+			*)
+				autotune_ns="monitoring"
+				;;
+		esac
+	fi
+
+	kubectl_cmd="kubectl -n ${autotune_ns}"
+	${kubectl_cmd} delete -f "${CRC_MANIFEST_FILE}" 2>/dev/null
 }

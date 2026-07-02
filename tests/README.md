@@ -1,134 +1,49 @@
-# **Autotune tests**
+# **Kruize Autotune tests**
 
-Autotune tests repository contains tests to validate individual autotune modules. Going forward we will be adding end-to-end tests and some non-functional tests to test other aspects like stability, scaling and resilience of Autotune. 
-
-## Autotune Modules
-
-Autotune functional tests validate individual modules of Autotune. Autotune has the following high level modules:
-
-- Analyzer module
-	- Dependency Analyzer
-	- Recommendation Manager
-- Hyperparameter Optimization module
-- Experiment manager module
-
-Refer [Autotune modules](https://github.com/kruize/autotune/blob/master/docs/autotune_modules.md) for details.
-
-## High level Test Scenarios
-
-- IT Admin adds Autotune object (application config for autotune to tune the app)
-- SME adds / modifies Autotune layer
-- SME adds / modifies Autotune tunable
-- Autotune REST APIs
+Kruize Autotune tests repository contains tests to validate Kruize in remote monitoring and local monitoring modes. 
 
 ## Functional tests description
 
-### Dependency Analyzer module tests
+### Remote monitoring tests
 
-- **Application autotune yaml tests**
+  Here we test Kruize [Remote monitoring APIs](/design/MonitoringModeAPI.md). 
 
-  Here we validate if a user is able to add an autotune object for the application that needs to be monitored by autotune and if autotune rejects the invalid autotune yamls with appropriate error messages.
-   
-   The test does the following:
-   - Deploys autotune and its dependencies using the [deploy script](https://github.com/kruize/autotune/blob/master/deploy.sh) from the autotune repo
-   - Applies the application autotune yaml 
-   - Checks if autotune validates the yaml 
+#### API tests
 
-- **Autotune config yaml tests**
+  The tests does the following:
+  - Deploys kruize in non-CRD mode using the deploy script from the autotune repo
+  - Validates the behaviour of createExperiment, updateResults and listRecommendations APIs in various scenarios covering both positive and negative usecases.
 
-  Here we validate if a user can add a new autotune layer configuration with the required tunables or modify the existing layer configuration. We also check if autotune handles invalid configurations well giving out appropriate error messages to the users.
-   
-   The test does the following:
-   - Deploys autotune and its dependencies using the deploy script from the autotune repo
-   - Applies the autotune config yaml 
-   - Checks if autotune validates the yaml
+  For details refer this [doc](/tests/scripts/remote_monitoring_tests/Remote_monitoring_tests.md)
 
-- **Basic API tests**
+#### Stress test
 
-  Here we validate all the [Autotune REST APIs](https://github.com/kruize/autotune/blob/master/design/API.md).
-  
-  The test does the following:
-  - Deploys autotune and its dependencies using the deploy script from the autotune repo
-  - Deploys multiple instances of spring petclinic application 
-  - Applies the autotune application yamls for the petclinic deployments
-  - Validates the JSON output for all the Autotune REST APIs 
+To run the stress test refer the Stress test [README](/tests/scripts/remote_monitoring_tests/README.md)
 
-- **Modify autotune config tests**
+#### Fault tolerant test
 
-  Here we modify the layer config and validate the listAutotuneTunables Autotune REST API.
-  
-  The test does the following:
-  - Deploys autotune and its dependencies using the deploy script from the autotune repo
-  - Modify the layer config and apply
-  - Validate if the modified config is reflected in the JSON output from listAutotuneTunables Autotune API
+To run the fault tolerant test refer the [README](/tests/scripts/remote_monitoring_tests/fault_tolerant_tests.md)
 
-- **ConfigMap yaml tests**
+### Local monitoring tests
 
-  Here we modify the configmap yaml and validate if the behaviour is reflected in autotune. We also check if autotune identifies invalid configurations well by giving out appropriate error messages to the users.
-  
-  The test does the following:
-  - Modifies the configmap yaml
-  - Deploys autotune and its dependencies using the deploy script from the autotune repo
-  - Checks if autotune validates the configmap yaml
-  - Test validates the following scenarios:
-  	1. Invalid-cluster-type 
-  	2. Invalid-k8s-type
-  	3. Invalid-monitoring-agent
-  	4. Invalid-monitoring-service
-  	5. Change the logging_level to debug and check if the behaviour is reflected in autotune
-  
-- **Autotune object id tests**
+Here we test Kruize [Local monitoring APIs](/design/KruizeLocalAPI.md).
 
-  Here we validate the autotune object id for different scenarios.
-  
-  The test does the following:
-  - Deploys autotune and its dependencies using the deploy script from the autotune repo
-  - Deploys benchmark applications and requried application autotune yamls
-  - Validate autotune id for following scenarios:
-  	1. Check the uniqueness of the autotune object ids
-  	2. Check if re-applying the autotune object without modifying the yaml does not change the autotune object id
-  	3. Update and apply the application autotune yaml and compare the ids
-  	4. Deploy multiple applications and check if the autotune object ids are unique
-    
-- **Autotune layer config object id tests**
+#### API tests
 
-  Here we validate the autotune layer config object id for different scenarios.
-  
-  The test does the following:
-  - Deploys autotune and its dependencies using the deploy script from the autotune repo
-  - Validate autotune layer config id for following scenarios:
-  	1. Check the uniqueness of the autotune layer config ids
-  	2. Re-apply the layer config without modifying yaml and check if both the ids are same
-  	3. Update and apply the layer config yaml and compare the ids
-  	4. Apply new layer config and validate the id
+  The tests does the following:
+  - Deploys kruize in non-CRD mode using the deploy script from the autotune repo
+  - Validates the behaviour of list datasources, import metadata and list metadata APIs in various scenarios covering both positive and negative usecases.
 
-### Hyperparameter Optimization module tests
-
-- ** Hyper Parameter Optimization (HPO) API tests**
-
-  Here we validate the HPO API - /experiment_trials
-  
-  The test does the following:
-
-  - Start HPO service using mock [script](/tests/scripts/start_hpo_servers.sh)
-  - Validate HPO result for following scenarios:
-  	1. Post invalid and valid experiments to HPO /experiment_trials API and validate the results
-  	2. Post the same experiment again to HPO /experiment_trials API with operation set to "EXP_TRIAL_GENERATE_NEW" and validate the result
-  	3. Post the same experiment again to HPO /experiment_trials API with the operation set to "EXP_TRIAL_GENERATE_SUBSEQUENT" after we post the result for the previous trial, and check if subsequent trial number is generated
-  	4. Query the HPO /experiment_trials API with different invalid combination of experiment id and trial number
-  	5. Query the HPO /experiment_trials API for valid experiment id and trial number and validate the result
-  	6. Post the same experiment again to HPO /experiment_trials API with the operation set to "EXP_TRIAL_GENERATE_SUBSEQUENT" after we post the result for the previous trial. Now query the API using that trial number and validate the result
-  	7. Post invalid and valid experiment results to HPO /experiment_trials API and validate the result
-  	8. Post duplicate experiment results to HPO /experiment_trials API and validate the result
-  	9. Post different experiment results to HPO /experiment_trials API for the same experiment id and validate the result
+  For details refer this [doc](/tests/scripts/local_monitoring_tests/Local_monitoring_tests.md)
 
 ## Supported Clusters
-- Minikube
+- Minikube, Openshift
 
 ## Prerequisites for running the tests:
 
 - Minikube setup 
 - Tools like docker, kubectl, and jq
+- python
 
 Clone the kruize/benchmarks repo using the below command:
 
@@ -148,7 +63,7 @@ First, cleanup any previous instances of autotune using the below command:
 Use the below command to test :
 
 ```
-<AUTOTUNE_REPO>/tests/test_autotune.sh -c minikube -r [location of benchmarks]  [-i autotune image] [-o optuna image] [--tctype=functional] [--testmodule=Autotune module to be tested] [--testsuite=Group of tests that you want to perform] [--testcase=Particular test case that you want to test] [-n namespace] [--resultsdir=results directory] [--hpo specifying this flag starts the HPO service]
+<AUTOTUNE_REPO>/tests/test_autotune.sh -c minikube [-i autotune image] [-o [operator image]] [--testsuite=Group of tests that you want to perform] [--testcase=Particular test case that you want to test] [-n namespace] [--resultsdir=results directory] [--skipsetup] [--cleanup_prometheus] [--api-version=<v1|legacy>] [-t cleanup kruize setup]
 ```
 
 Where values for test_autotune.sh are:
@@ -156,15 +71,14 @@ Where values for test_autotune.sh are:
 ```
 usage: test_autotune.sh [ -c ] : cluster type. Supported type - minikube
                         [ -i ] : optional. Autotune docker image to be used for testing, default - kruize/autotune_operator:test
-                        [ -o ] : optional. Optuna docker image to be used for testing, default - kruize/autotune_optuna:test
-			[ -r ] : Location of benchmarks
-			[ --tctype ] : optional. Testcases type to run, default is functional (runs all functional tests)
-			[ --testmodule ]: Module to be tested. Use testmodule=help, to list the modules to be tested
+			[ -o ] : optional. Deploy Kruize in operator mode (only for local_monitoring_tests). Optionally specify operator image, default - quay.io/kruize/kruize-operator:<version>
 			[ --testsuite ] : Testsuite to run. Use testsuite=help, to list the supported testsuites
 			[ --testcase ] : Testcase to run. Use testcase=help along with the testsuite name to list the supported testcases in that testsuite
 			[ -n ] : optional. Namespace to deploy autotune
 			[ --resultsdir ] : optional. Results directory location, by default it creates the results directory in current working directory
-			[ --hpo ] : optional. Specifying this option runs HPO tests in standalone mode without using the docker image for optuna]
+			[ --skipsetup ] : optional. Specifying this option skips the autotune setup & application deployment
+			[ --cleanup_prometheus ] : optional. Specifying this option along with -t option cleans up prometheus setup
+			[ --api-version ] : optional. API version to use for recommendations - 'v1' for new API (/kruize/api/v1/recommendations), 'legacy' for old APIs (updateRecommendations/listRecommendations). Default is 'legacy'
 
 Note: If you want to run a particular testcase then it is mandatory to specify the testsuite
 
@@ -172,18 +86,26 @@ Note: If you want to run a particular testcase then it is mandatory to specify t
 
 For example,
 
+To run remote monitoring tests,
+
 ```
-<AUTOTUNE_REPO>/tests/test_autotune.sh -c minikube --tctype=functional --testsuite=app_autotune_yaml_tests --testcase=slo_class -r /home/benchmarks --resultsdir=/home/results
+<AUTOTUNE_REPO>/tests/test_autotune.sh -c minikube -i kruize/autotune_operator:0.8 --testsuite=remote_monitoring_tests --resultsdir=/home/results
 ```
 
-## How to test a specific autotune module?
+To run local monitoring tests,
 
-To run the tests specific to a autotune module use the "testmodule" option. For example, to run all the tests for dependency analyzer module execute the below command:
 ```
-<AUTOTUNE_REPO>/tests/test_autotune.sh -c minikube --testmodule=da -r /home/benchmarks --resultsdir=/home/results
+<AUTOTUNE_REPO>/tests/test_autotune.sh -c minikube -i kruize/autotune_operator:0.8 --testsuite=local_monitoring_tests --resultsdir=/home/results
 ```
 
-To run all tests for Hyperparameter Optimization (hpo) module execute the below command:
+To run local monitoring tests in operator mode,
+
 ```
-<AUTOTUNE_REPO>/tests/test_autotune.sh -c minikube --testmodule=hpo /home/benchmarks --resultsdir=/home/results
+<AUTOTUNE_REPO>/tests/test_autotune.sh -c minikube -o --testsuite=local_monitoring_tests --resultsdir=/home/results
+```
+
+Or with a specific operator image,
+
+```
+<AUTOTUNE_REPO>/tests/test_autotune.sh -c minikube -o quay.io/kruize/kruize-operator:latest --testsuite=local_monitoring_tests --resultsdir=/home/results
 ```

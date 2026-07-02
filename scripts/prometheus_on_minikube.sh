@@ -23,16 +23,12 @@ non_interactive=0
 setup=1
 
 # Prometheus release default
-tag="v0.8.0"
+tag="v0.16.0"
 
 function install_prometheus() {
 	echo
 	echo "Info: Checking pre requisites for prometheus..."
-	kubectl_tool=$(which kubectl)
-	check_err "Error: Please install the kubectl tool"
-
-	kubectl kustomize --help >/dev/null 2>/dev/null
-	check_err "Error: Please install a newer version of kubectl tool that supports the kustomize option (>=v1.12)"
+	check_kustomize
 
 	prometheus_ns="monitoring"
 	kubectl_cmd="kubectl -n ${prometheus_ns}"
@@ -72,10 +68,15 @@ function install_prometheus() {
 		git clone -b ${tag} https://github.com/coreos/kube-prometheus.git 2>/dev/null
 		pushd kube-prometheus/manifests >/dev/null
 		echo
-		echo "Info: Installing prometheus"
-		kubectl apply -f setup
-		check_err "Error: Unable to setup prometheus"
-		kubectl apply -f .
+		echo "Info: Installing CRDs"
+		kubectl apply --server-side -f setup
+		check_err "Error: Unable to setup prometheus CRDs"
+		kubectl wait --for condition=Established --timeout=60s crd/servicemonitors.monitoring.coreos.com
+		kubectl wait --for condition=Established --timeout=60s crd/prometheuses.monitoring.coreos.com
+		kubectl wait --for condition=Established --timeout=60s crd/alertmanagers.monitoring.coreos.com
+		kubectl wait --for condition=Established --timeout=60s crd/prometheusrules.monitoring.coreos.com
+		check_err "Error: Unable to setup prometheus CRDs"
+		kubectl apply --server-side -f .
 		check_err "Error: Unable to install prometheus"
 		popd >/dev/null
 	popd >/dev/null
@@ -94,7 +95,7 @@ function install_prometheus() {
 			break;
 		fi
 	done
-	check_running prometheus-k8s-1
+	check_running prometheus-k8s-1 ${prometheus_ns}
 	sleep 2
 }
 
@@ -119,7 +120,7 @@ function delete_prometheus() {
 
 # Input from user to install/delete prometheus
 function usage() {
-	echo >&2 "usage: $0 [-r <prometheus release tag (default - v0.8.0)] [-a] [-s|t] where -a= non-interactive mode,  -s=start, -t=terminate ";
+	echo >&2 "usage: $0 [-r <prometheus release tag (default - v0.16.0)] [-a] [-s|t] where -a= non-interactive mode,  -s=start, -t=terminate ";
 	exit 1;
 }
 

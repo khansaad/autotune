@@ -1,0 +1,162 @@
+name: Kruize Remote monitoring functional tests
+
+on:
+  issue_comment:
+    types: [created]
+    issue_type: [pull_request]
+
+jobs:
+  functest:
+
+    if: contains(github.event.comment.body, 'run functional tests')
+    outputs:
+      workflow_url: ${{ steps.workflow_run_info.outputs.url }}
+      workflow_id: ${{ steps.workflow_run_info.outputs.id }}
+
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Get workflow run info
+        run: |
+          echo "url=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" >> $GITHUB_OUTPUT
+          echo "id=$GITHUB_RUN_ID" >> $GITHUB_OUTPUT
+          echo "url=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          echo "id=$GITHUB_RUN_ID"
+        id: workflow_run_info
+        
+      - name: Debug Comment Content
+        run: echo "Comment :${{ github.event.comment.body }}"
+
+     
+      - uses: actions/github-script@v9
+        id: get-pr
+        with:
+          script: |
+            const request = {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            }
+            core.info(`Getting PR #${request.pull_number} from ${request.owner}/${request.repo}`)
+            try {
+              const result = await github.rest.pulls.get(request)
+              return result.data
+            } catch (err) {
+              core.setFailed(`Request failed with error ${err}`)
+            }
+      
+      - name: Check out code
+        uses: actions/checkout@v7
+        with:
+          ref: refs/pull/${{ github.event.issue.number }}/head
+
+      - name: Setup Minikube
+        uses: manusa/actions-setup-minikube@v2.18.0
+        with:
+          minikube version: 'v1.38.0'
+          kubernetes version: 'v1.34.4'
+
+      - name: Build crc
+        run: |
+          echo Build crc
+          ./build.sh -i autotune_operator:test_build
+          docker images | grep autotune
+
+      - name: Install Prometheus on minikube
+        run: |
+          echo Install Prometheus on minikube
+          cd scripts
+          ./prometheus_on_minikube.sh -as
+    
+      - name: Run Kruize remote monitoring functional tests on minikube
+        run: |
+          ps -ef | grep python
+          echo Running Kruize remote monitoring tests on minikube
+          cp ./manifests/crc/default-db-included-installation/minikube/kruize-crc-minikube.yaml ./manifests/crc/default-db-included-installation/minikube/kruize-crc-minikube.yaml.old
+          sed -e "s/imagePullPolicy: Always/imagePullPolicy: IfNotPresent/g" ./manifests/crc/default-db-included-installation/minikube/kruize-crc-minikube.yaml.old > ./manifests/crc/default-db-included-installation/minikube/kruize-crc-minikube.yaml
+          cat ./manifests/crc/default-db-included-installation/minikube/kruize-crc-minikube.yaml
+
+          cd tests         
+          ./test_autotune.sh -c minikube -i autotune_operator:test_build --testsuite=remote_monitoring_tests --resultsdir=${GITHUB_WORKSPACE}
+
+      - name: Capture ffdc logs
+        if: always()
+        run: |
+          ./scripts/ffdc.sh -m crc -d ${GITHUB_WORKSPACE}/kruize_test_results
+          
+      - name: Archive results
+        if: always()
+        run: |
+          cd ${GITHUB_WORKSPACE}
+          tar cvf kruize_test_results.tgz kruize_test_results
+          
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+           name: kruize_test_results
+           path: ./kruize_test_results.tar
+           retention-days: 2
+
+  reportFailure:
+    runs-on: ubuntu-24.04
+    needs: [functest]
+    if: failure()
+    steps:
+    - name: Create comment
+      uses: actions/github-script@v9
+      with:
+        github-token: ${{secrets.GITHUB_TOKEN}}
+        script: |
+          comment_body = `
+          @${{ github.actor }} Build(s) failed.
+          Workflow Run ID: [${{ needs.functest.outputs.workflow_id }}](${{ needs.functest.outputs.workflow_url }})
+          `;
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment_body
+          })
+
+  reportCancelled:
+    runs-on: ubuntu-24.04
+    needs: [functest]
+    if: cancelled()
+    steps:
+    - name: Create comment
+      uses: actions/github-script@v9
+      with:
+        github-token: ${{secrets.GITHUB_TOKEN}}
+        script: |
+          comment_body = `
+          @${{ github.actor }} Build(s) cancelled.
+          Workflow Run ID: [${{ needs.functest.outputs.workflow_id }}](${{ needs.functest.outputs.workflow_url }})
+          `;
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment_body
+          })
+          
+  reportSuccess:
+    runs-on: ubuntu-24.04
+    needs: [functest]
+    if: success()
+    steps:
+    - name: Create comment
+      uses: actions/github-script@v9
+      with:
+        github-token: ${{secrets.GITHUB_TOKEN}}
+        script: |
+          
+          comment_body = `
+          @${{ github.actor }} Build(s) successful.
+          Workflow Run ID: [${{ needs.functest.outputs.workflow_id }}](${{ needs.functest.outputs.workflow_url }})
+          `;
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment_body
+          })

@@ -1,0 +1,1155 @@
+/*******************************************************************************
+ * Copyright (c) 2020, 2022 Red Hat, IBM Corporation and others.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *******************************************************************************/
+package com.autotune.analyzer.utils;
+
+import com.autotune.utils.KruizeConstants;
+import com.autotune.utils.Utils;
+
+import java.util.Map;
+import java.util.*;
+import java.util.regex.Pattern;
+
+/**
+ * Holds constants used in other parts of the codebase
+ */
+public class AnalyzerConstants {
+    public static final String MODE = "mode";
+    public static final String TARGET_CLUSTER = "target_cluster";
+    public static final String MONITOR = "monitor";
+    public static final String EXPERIMENT = "experiment";
+    public static final String LOCAL = "local";
+    public static final String REMOTE = "remote";
+    public static final String AUTO = "auto";
+    public static final String RECREATE = "recreate";
+
+
+
+    // Used to parse autotune configmaps
+
+
+    public static final String PROMETHEUS_DATA_SOURCE = "prometheus";
+    public static final String PROMETHEUS_API = "/api/v1/query?query=";
+    public static final String HTTP_PROTOCOL = "http";
+    public static final String HTTPS_PROTOCOL = "https";
+    // Used in Configuration for accessing the autotune objects from kubernetes
+    public static final String SCOPE = "Namespaced";
+    public static final String GROUP = "recommender.com";
+    public static final String API_VERSION_V1 = "v1";
+    public static final String POD_TEMPLATE_HASH = "pod-template-hash";
+    public static final String AUTOTUNE_PLURALS = "autotunes";
+
+    public static final String AUTOTUNE_RESOURCE_NAME = AUTOTUNE_PLURALS + GROUP;
+    public static final String DEFAULT_K8S_TYPE = "openshift";
+    public static final String PROFILE_VERSION = "profile_version";
+    public static final Double DEFAULT_PROFILE_VERSION = 1.0;
+    public static final String AGGREGATION_FUNCTIONS = "aggregation_functions";
+    public static final String FUNCTION = "function";
+    public static final String VERSIONS = "versions";
+    public static final String KUBERNETES_OBJECT = "kubernetes_object";
+    public static final String KUBERNETES_OBJECTS = "kubernetes_objects";
+    public static final String AUTOTUNE_CONFIG_PLURALS = "autotuneconfigs";
+    public static final String AUTOTUNE_CONFIG_RESOURCE_NAME = AUTOTUNE_CONFIG_PLURALS + GROUP;
+    public static final String AUTOTUNE_VARIABLE_PLURALS = "autotunequeryvariables";
+    public static final String AUTOTUNE_VARIABLE_RESOURCE_NAME = AUTOTUNE_VARIABLE_PLURALS + GROUP;
+    public static final String PRESENCE_ALWAYS = "always";
+    public static final String NONE = "none";
+    public static final String POD_VARIABLE = "$POD$";
+    public static final String NAMESPACE_VARIABLE = "$NAMESPACE$";
+    public static final String CONTAINER_VARIABLE = "$CONTAINER_NAME$";
+    public static final String MEASUREMENT_DURATION_IN_MIN_VARAIBLE = "$MEASUREMENT_DURATION_IN_MIN$";
+    public static final String WORKLOAD_VARIABLE = "$WORKLOAD$";
+    public static final String WORKLOAD_TYPE_VARIABLE = "$WORKLOAD_TYPE$";
+    public static final String UNSUPPORTED_WORKLOAD_TYPES_VARIABLE = "$UNSUPPORTED_WORKLOAD_TYPES$";
+    public static final String API_VERSION = "apiVersion";
+    public static final String KIND = "kind";
+    public static final String RESOURCE_VERSION = "resourceVersion";
+    public static final String UID = "uid";
+    public static final String REASON_NORMAL = "Normal";
+    public static final String AUTOTUNE = "Autotune";
+    public static final String EXPERIMENT_MAP = "MainExperimentsMAP";
+    public static final String NAME = "experimentName";
+    public static final String SLO = "sloInfo";
+    public static final String NAMESPACE = "namespace";
+    public static final String RECOMMENDATION_SETTINGS = "recommendation_settings";
+    public static final String DEPLOYMENT_NAME = "name";
+    public static final String SELECTOR = "selectorInfo";
+    public static final String NULL = "null";
+    public static final String BULKUPLOAD_CREATEEXPERIMENT_LIMIT = "bulkupload_createexperiment_limit";
+    public static final String PERSISTANCE_STORAGE = "persistance_storage";
+    public static final String RESULTS_COUNT = "results_count";
+    public static final int GC_THRESHOLD_COUNT = 100;
+    public static final String TARGET = "target/bin";
+    public static final String MIGRATIONS = "migrations";
+    public static final String ROS_DDL_SQL = "kruize_experiments_ddl.sql";
+    public static final String KRUIZE_LOCAL_DDL_SQL = "kruize_local_ddl.sql";
+    public static final String VERSION = "version";
+    public static final String DATASOURCE_NAME = "dataSourceName";
+    public static final String TRIAL_RESULT_SUMMARY = "trialSummaryResult";
+    public static final String CYCLE_DATA_MAP = "cycleDataMap";
+    public static final String METRICS = "metrics";
+    public static final String SUCCESS_STATUS = "SUCCESS";
+    public static final String UUID_VARIABLE = "$UUID$";
+    public static final String PROFILE_VARIABLE = "$GPU_I_PROFILE$";
+    public static final String ERROR_STATUS = "ERROR";
+    public static final String METADATA_PROFILE = "metadataProfile";
+    public static final String WORKLOAD = "workload";
+    public static final String CONTAINER = "container";
+    public static final int DEFAULT_MEASUREMENT_DURATION_INT = 15;
+    public static final String KRUIZE_PROFILE_FILTER = "kruize";
+    public static final String NAMESPACE_PROFILE_FILTER = "openshift-tuning|monitoring";
+    public static final String NAMESPACE_FILTER_IDENTIFIER = ", %s=~\"%s\"";
+    public static final String WORKLOAD_FILTER_IDENTIFIER = ", %s=\"%s\"";
+    public static final String METADATA_PROFILE_QUERY_MATCHER = "sum by \\((.*?)\\)";
+    public static final String COMMA_SPACE_REGEX = "\\s*,\\s*";
+    public static final String RM = "rm";
+    public static final String LM = "lm";
+    public static final String VENDOR = "vendor";
+    public static final String RUNTIME = "runtime";
+
+    private AnalyzerConstants() {
+    }
+
+    public enum MODEType {
+        MONITORING,
+        EXPERIMENT;
+
+    }
+
+    public enum TargetType {
+        LOCAL,
+        REMOTE;
+
+    }
+
+    public enum ExperimentStatus {
+        QUEUED,
+        IN_PROGRESS,
+        STALE,
+        PAUSE,
+        RESUME,
+        DELETE,
+        COMPLETED,
+        FAILED;
+    }
+
+    public enum RecommendationItem {
+        CPU("cpu"),
+        MEMORY("memory"),
+        NVIDIA_GPU("nvidia.com/gpu"),
+        NVIDIA_GPU_PARTITION_1_CORE_5GB("nvidia.com/mig-1g.5gb"),
+        NVIDIA_GPU_PARTITION_1_CORE_10GB("nvidia.com/mig-1g.10gb"),
+        NVIDIA_GPU_PARTITION_1_CORE_20GB("nvidia.com/mig-1g.20gb"),
+        NVIDIA_GPU_PARTITION_2_CORES_20GB("nvidia.com/mig-2g.20gb"),
+        NVIDIA_GPU_PARTITION_3_CORES_40GB("nvidia.com/mig-3g.40gb"),
+        NVIDIA_GPU_PARTITION_4_CORES_40GB("nvidia.com/mig-4g.40gb"),
+        NVIDIA_GPU_PARTITION_7_CORES_80GB("nvidia.com/mig-7g.80gb"),
+        NVIDIA_GPU_PARTITION_2_CORES_10GB("nvidia.com/mig-2g.10gb"),
+        NVIDIA_GPU_PARTITION_3_CORES_20GB("nvidia.com/mig-3g.20gb"),
+        NVIDIA_GPU_PARTITION_4_CORES_20GB("nvidia.com/mig-4g.20gb"),
+        NVIDIA_GPU_PARTITION_7_CORES_40GB("nvidia.com/mig-7g.40gb"),
+
+        // H200 related partitions
+        NVIDIA_GPU_PARTITION_1_CORE_18GB("nvidia.com/mig-1g.18gb"),
+        NVIDIA_GPU_PARTITION_1_CORE_35GB("nvidia.com/mig-1g.35gb"),
+        NVIDIA_GPU_PARTITION_2_CORES_35GB("nvidia.com/mig-2g.35gb"),
+        NVIDIA_GPU_PARTITION_3_CORES_71GB("nvidia.com/mig-3g.71gb"),
+        NVIDIA_GPU_PARTITION_4_CORES_71GB("nvidia.com/mig-4g.71gb"),
+        NVIDIA_GPU_PARTITION_7_CORES_141GB("nvidia.com/mig-7g.141gb"),
+
+        // B200 related partitions
+        NVIDIA_GPU_PARTITION_1_CORE_23GB("nvidia.com/mig-1g.23gb"),
+        NVIDIA_GPU_PARTITION_1_CORE_45GB("nvidia.com/mig-1g.45gb"),
+        NVIDIA_GPU_PARTITION_2_CORES_45GB("nvidia.com/mig-2g.45gb"),
+        NVIDIA_GPU_PARTITION_3_CORES_90GB("nvidia.com/mig-3g.90gb"),
+        NVIDIA_GPU_PARTITION_4_CORES_90GB("nvidia.com/mig-4g.90gb"),
+        NVIDIA_GPU_PARTITION_7_CORES_180GB("nvidia.com/mig-7g.180gb"),
+
+        // RTX PRO 5000 Blackwell related partitions
+        NVIDIA_GPU_PARTITION_1_CORE_12GB("nvidia.com/mig-1g.12gb"),
+        NVIDIA_GPU_PARTITION_2_CORES_24GB_ME("nvidia.com/mig-2g.24gb-me"),
+        NVIDIA_GPU_PARTITION_4_CORES_48GB_GFX("nvidia.com/mig-4g.48gb+gfx"),
+
+        // RTX PRO 6000 Blackwell related partitions
+        NVIDIA_GPU_PARTITION_1_CORE_24GB_GFX("nvidia.com/mig-1g.24gb+gfx"),
+        NVIDIA_GPU_PARTITION_2_CORES_48GB_GFX("nvidia.com/mig-2g.48gb+gfx"),
+        NVIDIA_GPU_PARTITION_4_CORES_96GB_GFX("nvidia.com/mig-4g.96gb+gfx"),
+
+        // H100 94GB related partitions
+        NVIDIA_GPU_PARTITION_1_CORE_24GB("nvidia.com/mig-1g.24gb"),
+        NVIDIA_GPU_PARTITION_2_CORES_24GB("nvidia.com/mig-2g.24gb"),
+        NVIDIA_GPU_PARTITION_3_CORES_47GB("nvidia.com/mig-3g.47gb"),
+        NVIDIA_GPU_PARTITION_4_CORES_47GB("nvidia.com/mig-4g.47gb"),
+        NVIDIA_GPU_PARTITION_7_CORES_94GB("nvidia.com/mig-7g.94gb"),
+
+        // H100 96GB related partitions
+        NVIDIA_GPU_PARTITION_3_CORES_48GB("nvidia.com/mig-3g.48gb"),
+        NVIDIA_GPU_PARTITION_4_CORES_48GB("nvidia.com/mig-4g.48gb"),
+        NVIDIA_GPU_PARTITION_7_CORES_96GB("nvidia.com/mig-7g.96gb");
+
+
+        private final String value;
+
+        RecommendationItem(String value) {
+            this.value = value;
+        }
+
+        @Override
+        public String toString() {
+            return value;
+        }
+    }
+
+    public enum CapacityMax {
+        capacity,
+        max
+    }
+
+    public enum ResourceSetting {
+        requests,
+        limits
+    }
+
+    public enum RuntimesSetting {
+        env
+    }
+
+    public enum ConfigType {
+        REQUESTS(ResourceSetting.requests),
+        LIMITS(ResourceSetting.limits),
+        ENV(RuntimesSetting.env);
+
+        private final Enum<?> sourceEnum;
+
+        ConfigType(Enum<?> sourceEnum) {
+            this.sourceEnum = sourceEnum;
+        }
+    }
+
+    public enum PersistenceType {
+        LOCAL,              //Store only local  , Default
+        HYBRID,             //Store data both in db and local
+        DB                  //Store only DB
+    }
+
+    public enum RecommendationSection {
+        CURRENT_CONFIG(KruizeConstants.JSONKeys.CURRENT),
+        RECOMMENDATION_CONFIG(KruizeConstants.JSONKeys.CONFIG),
+        VARIATION(KruizeConstants.JSONKeys.VARIATION);
+
+        private String name;
+
+        private RecommendationSection(String name) {
+            this.name = name;
+        }
+
+        public String getName() {
+            return this.name;
+        }
+    }
+
+    public enum MetricName {
+        cpuRequest,
+        cpuLimit,
+        cpuUsage,
+        cpuThrottle,
+        memoryRequest,
+        memoryLimit,
+        memoryUsage,
+        memoryRSS,
+        maxDate,
+        namespaceCpuRequest,
+        namespaceCpuLimit,
+        namespaceCpuUsage,
+        namespaceCpuThrottle,
+        namespaceMemoryRequest,
+        namespaceMemoryLimit,
+        namespaceMemoryUsage,
+        namespaceMemoryRSS,
+        namespaceTotalPods,
+        namespaceRunningPods,
+        namespaceMaxDate,
+        acceleratorCoreUsage,
+        acceleratorMemoryUsage,
+        acceleratorFrameBufferUsage,
+        jvmInfo,
+        jvmInfoTotal,
+        podCount
+    }
+
+    public enum K8S_OBJECT_TYPES {
+        DEPLOYMENT,
+        DEPLOYMENT_CONFIG,
+        STATEFULSET,
+        REPLICASET,
+        REPLICATION_CONTROLLER,
+        DAEMONSET,
+        JOB,
+    }
+
+    public enum RegisterRecommendationModelStatus {
+        SUCCESS,
+        ALREADY_EXISTS,
+        INVALID
+    }
+
+    public enum DeviceType {
+        CPU,
+        MEMORY,
+        NETWORK,
+        ACCELERATOR,
+        ACCELERATOR_PARTITION
+    }
+
+    public enum DeviceParameters {
+        MODEL_NAME,
+        UUID,
+        HOSTNAME,
+        NAME,
+        MANUFACTURER,
+        DEVICE_NAME
+    }
+
+    public enum ExperimentType {
+        CONTAINER,  // For container-level experiments
+        NAMESPACE,  // For namespace-level experiments
+        CLUSTER,    // For cluster-wide experiments
+        WORKLOAD // For application-specific experiments
+    }
+
+    /**
+     * This enum holds the positional flags which are used by experiment type
+     */
+    public enum ExperimentBitMask {
+        // Infra Bits [0-15]
+        CONTAINER_BIT(0),
+        POD_BIT(1),
+        WORKLOAD_BIT(2),
+        NAMESPACE_BIT(3),
+        NAMESPACE_GROUP_BIT(4),
+        CLUSTER_BIT(5),
+
+        // Resource Bits [16-31]
+        CPU_BIT(16),
+        MEMORY_BIT(17),
+        STORAGE_BIT(18),
+        NETWORK_BIT(19),
+        ACCELERATOR_BIT(20),
+
+        // Runtime Bits [32-47]
+        JVM_BIT(32);
+
+        private final int position;
+
+        ExperimentBitMask(int position) {
+            this.position = position;
+        }
+
+        public int getPosition() {
+            return position;
+        }
+
+        /**
+         * Returns a long with this bit set: 1L << position
+         */
+        public long getMask() {
+            return 1L << position;
+        }
+
+        /**
+         * Checks if this bit is set in the given long value.
+         */
+        public boolean isSet(long value) {
+            return (value & getMask()) != 0;
+        }
+
+        /**
+         * Sets this bit in the given value and returns the updated long.
+         */
+        public long setBit(long value) {
+            return value | getMask();
+        }
+    }
+
+    public enum MetadataProfileQueryIdentifier {
+        NAMESPACE_QUERY_IDENTIFIER(new LinkedHashSet<>(List.of("namespace"))),
+
+        WORKLOAD_QUERY_IDENTIFIER(new LinkedHashSet<>(List.of("namespace", "workload", "workload_type"))),
+
+        CONTAINER_QUERY_IDENTIFIER(new LinkedHashSet<>(List.of("container", "image", "workload", "workload_type", "namespace")));
+
+        private final Set<String> expectedIdentifiers;
+
+        MetadataProfileQueryIdentifier(Set<String> expectedIdentifiers) {
+            this.expectedIdentifiers = expectedIdentifiers;
+        }
+
+        public Set<String> getExpectedIdentifiers() {
+            return expectedIdentifiers;
+        }
+    }
+
+    public enum OperationType {
+        CREATE, UPDATE
+    }
+
+    public enum LayerConversionSection {
+        BASIC_FIELDS,
+        METADATA,
+        LAYER_PRESENCE,
+        TUNABLES
+    }
+
+
+    /**
+     * Validates if the metricName to be updated has supported prefix like namespace, workload, container.
+     * @param metricName Name of the metric to be updated
+     * @return boolean output if the metric name has one of the supported prefixes
+     */
+    public static boolean validateMetricQueryName(String metricName) {
+        List<String> supportedQueryPrefixes = Arrays.asList(AnalyzerConstants.NAMESPACE,
+                AnalyzerConstants.WORKLOAD, AnalyzerConstants.CONTAINER);
+
+        String metricNameLowerCase = metricName.toLowerCase();
+        for (String queryPrefix : supportedQueryPrefixes) {
+            if (metricNameLowerCase.contains(queryPrefix)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+
+    public static final class AcceleratorConstants {
+        private AcceleratorConstants() {
+
+        }
+
+        public static final class AcceleratorMetricConstants {
+            public static final int TIMESTAMP_RANGE_CHECK_IN_MINUTES = 5;
+
+            private AcceleratorMetricConstants() {
+
+            }
+        }
+
+        public static final class SupportedAccelerators {
+            public static final String A100_80_GB = "A100-80GB";
+            public static final String A100_40_GB = "A100-40GB";
+            public static final String H100_80_GB = "H100-80GB";
+            public static final String H100_94_GB = "H100-94GB";
+            public static final String H100_96_GB = "H100-96GB";
+            public static final String H200_141_GB = "H200-141GB";
+            public static final String B200_180_GB = "B200-180GB";
+            public static final String BW_RTX_PRO_5000_48_GB = "RTX-PRO-5000-48GB";
+            public static final String BW_RTX_PRO_6000_96_GB = "RTX-PRO-6000-96GB";
+
+            private SupportedAccelerators() {
+
+            }
+        }
+
+        public static final class AcceleratorProfiles {
+            // A100 40GB Profiles
+            public static final String PROFILE_1G_5GB = "1g.5gb";
+            public static final String PROFILE_1G_10GB = "1g.10gb";
+            public static final String PROFILE_2G_10GB = "2g.10gb";
+            public static final String PROFILE_3G_20GB = "3g.20gb";
+            public static final String PROFILE_4G_20GB = "4g.20gb";
+            public static final String PROFILE_7G_40GB = "7g.40gb";
+
+            // A100 80GB & H100 80GB Profiles
+            public static final String PROFILE_1G_20GB = "1g.20gb";
+            public static final String PROFILE_2G_20GB = "2g.20gb";
+            public static final String PROFILE_3G_40GB = "3g.40gb";
+            public static final String PROFILE_4G_40GB = "4g.40gb";
+            public static final String PROFILE_7G_80GB = "7g.80gb";
+
+            // H200 Profiles
+            public static final String H200_PROFILE_1G_18GB = "1g.18gb";
+            public static final String H200_PROFILE_1G_35GB = "1g.35gb";
+            public static final String H200_PROFILE_2G_35GB = "2g.35gb";
+            public static final String H200_PROFILE_3G_71GB = "3g.71gb";
+            public static final String H200_PROFILE_4G_71GB = "4g.71gb";
+            public static final String H200_PROFILE_7G_141GB = "7g.141gb";
+
+            // B200 Profiles
+            public static final String B200_PROFILE_1G_23GB = "1g.23gb";
+            public static final String B200_PROFILE_1G_45GB = "1g.45gb";
+            public static final String B200_PROFILE_2G_45GB = "2g.45gb";
+            public static final String B200_PROFILE_3G_90GB = "3g.90gb";
+            public static final String B200_PROFILE_4G_90GB = "4g.90gb";
+            public static final String B200_PROFILE_7G_180GB = "7g.180gb";
+
+            // RTX PRO 5000 Blackwell Profiles
+            public static final String RTX_PRO_5000_PROFILE_1G_12GB = "1g.12gb-me";
+            public static final String RTX_PRO_5000_PROFILE_2G_24GB = "2g.24gb-me";
+            public static final String RTX_PRO_5000_PROFILE_4G_48GB = "4g.48gb+gfx";
+
+            // RTX PRO 6000 Blackwell Profiles
+            public static final String RTX_PRO_6000_PROFILE_1G_24GB = "1g.24gb+gfx";
+            public static final String RTX_PRO_6000_PROFILE_2G_48GB = "2g.48gb+gfx";
+            public static final String RTX_PRO_6000_PROFILE_4G_96GB = "4g.96gb+gfx";
+
+            // H100 94 GB Profiles
+            public static final String H100_PROFILE_1G_12GB = "1g.12gb";
+            public static final String H100_PROFILE_1G_24GB = "1g.24gb";
+            public static final String H100_PROFILE_2G_24GB = "2g.24gb";
+            public static final String H100_PROFILE_3G_47GB = "3g.47gb";
+            public static final String H100_PROFILE_4G_47GB = "4g.47gb";
+            public static final String H100_PROFILE_7G_94GB = "7g.94gb";
+
+            // H100 96 GB Profiles
+            public static final String H100_PROFILE_3G_48GB = "3g.48gb";
+            public static final String H100_PROFILE_4G_48GB = "4g.48gb";
+            public static final String H100_PROFILE_7G_96GB = "7g.96gb";
+
+            private AcceleratorProfiles() {
+
+            }
+        }
+
+        public static final class AcceleratorMemory {
+            private AcceleratorMemory() {
+
+            }
+
+            public static final String UNIT_GB = "GB";
+            public static final String GB_40 = "40" + UNIT_GB;
+            public static final String GB_80 = "80" + UNIT_GB;
+            public static final String GB_141 =  "141" + UNIT_GB;
+            public static final String GB_94 =  "94" + UNIT_GB;
+            public static final String GB_96 =  "96" + UNIT_GB;
+
+        }
+
+        public static final class AcceleratorNameTokens {
+            private AcceleratorNameTokens() {}
+
+            public static final String A100 = "A100";
+            public static final String H100 = "H100";
+            public static final String H200 = "H200";
+            public static final String RTX = "RTX";
+            public static final String B200 = "B200";
+            public static final String PRO = "PRO";
+            public static final String RTX_5000 = "5000";
+            public static final String RTX_6000 = "6000";
+        }
+
+        public static final class AcceleratorAutoscalerLabels {
+            private AcceleratorAutoscalerLabels() {
+
+            }
+
+            public static final String CONTROLLER_UID = "controller-uid";
+            public static final String BATCH_CONTROLLER_UID = "batch.kubernetes.io/controller-uid";
+        }
+
+        public static final class AcceleratorLogs {
+            private AcceleratorLogs() {}
+
+            public static final String UNSUPPORTED_ACCELERATOR = "Unsupported accelerator detected: {}";
+        }
+    }
+
+    public static final class ExperimentTypes {
+        public static final String NAMESPACE_EXPERIMENT = "namespace";
+        public static final String CONTAINER_EXPERIMENT = "container";
+
+        private ExperimentTypes() {
+        }
+    }
+
+    /**
+     * Used to parse the Autotune kind resource
+     */
+    public static final class AutotuneObjectConstants {
+
+        public static final String SPEC = "spec";
+        public static final String SLO = "slo";
+        public static final String SLO_CLASS = "slo_class";
+        public static final String DIRECTION = "direction";
+        public static final String OBJECTIVE_FUNCTION = "objective_function";
+        public static final String OBJ_FUNCTION_TYPE = "function_type";
+        public static final String EXPRESSION = "expression";
+        public static final String FUNCTION_VARIABLES = "function_variables";
+        public static final String NAME = "name";
+        public static final String QUERY = "query";
+        public static final String VALUE_TYPE = "value_type";
+        public static final String DATASOURCE = "datasource";
+        public static final String TOTAL_TRIALS = "total_trials";
+        public static final String PARALLEL_TRIALS = "parallel_trials";
+        public static final String MINIMIZE = "minimize";
+        public static final String MAXIMIZE = "maximize";
+        public static final String SELECTOR = "selector";
+        public static final String MATCH_LABEL = "matchLabel";
+        public static final String MATCH_LABEL_VALUE = "matchLabelValue";
+        public static final String MATCH_ROUTE = "matchRoute";
+        public static final String MATCH_URI = "matchURI";
+        public static final String MATCH_SERVICE = "matchService";
+        public static final String MODE = "mode";
+        public static final String DEFAULT_MODE = "experiment";
+        public static final String TARGET_CLUSTER = "target_cluster";
+        public static final String DEFAULT_TARGET_CLUSTER = "local";
+        public static final String METADATA = "metadata";
+        public static final String NAMESPACE = "namespace";
+        public static final String EXPERIMENT_ID = "experiment_id";
+        public static final String HPO_ALGO_IMPL = "hpo_algo_impl";
+        public static final String DEFAULT_HPO_ALGO_IMPL = "optuna_tpe";
+        public static final String FUNCTION_VARIABLE = "function_variable: ";
+        public static final String QUERY_VARIABLE = "For query_variable: ";
+        public static final String CLUSTER_NAME = "cluster_name";
+        public static final String QUERY_VARIABLES = "query_variables";
+        public static final String JVM_METADATA = "jvm_metadata";
+
+        private AutotuneObjectConstants() {
+        }
+    }
+
+    /**
+     * Used to parse the KruizeLayer resource
+     */
+    public static final class AutotuneConfigConstants {
+
+        public static final String METADATA = "metadata";
+        public static final String NAMESPACE = "namespace";
+        public static final String DATASOURCE = "datasource";
+        public static final String LAYER_NAME = "layer_name";
+        public static final String LAYER_PRESENCE = "layer_presence";
+        public static final String PRESENCE = "presence";
+        public static final String LABEL = "label";
+        public static final String QUERY_VARIABLES = "query_variables";
+        public static final String VALUE = "value";
+        public static final String DETAILS = "details";
+        public static final String TUNABLES = "tunables";
+        public static final String QUERIES = "queries";
+        public static final String NAME = "name";
+        public static final String QUERY = "query";
+        public static final String KEY = "key";
+        public static final String VALUE_TYPE = "value_type";
+        public static final String UPPER_BOUND = "upper_bound";
+        public static final String LOWER_BOUND = "lower_bound";
+        public static final String CATEGORICAL_TYPE = "categorical";
+        public static final String TRUE = "true";
+        public static final String FALSE = "false";
+        public static final String DOUBLE = "double";
+        public static final String LONG = "long";
+        public static final String INTEGER = "integer";
+        public static final Pattern BOUND_CHARS = Pattern.compile("[\\sa-zA-Z]");
+        public static final Pattern BOUND_DIGITS = Pattern.compile("[\\s0-9\\.]");
+        public static final String SLO_CLASS = "slo_class";
+        public static final String LAYER_PRESENCE_LABEL = "layerPresenceLabel";
+        public static final String LAYER_PRESENCE_LABEL_VALUE = "layerPresenceLabelValue";
+        public static final String LAYER_PRESENCE_QUERIES = "layerPresenceQueries";
+        public static final String LAYER_ID = "layer_id";
+        public static final String STEP = "step";
+        public static final String LAYER_GENERIC = "generic";
+        public static final String LAYER_CONTAINER = "container";
+        public static final String LAYER_HOTSPOT = "hotspot";
+        public static final String LAYER_QUARKUS = "quarkus";
+        public static final String LAYER_SEMERU = "semeru";
+        public static final String LAYER_NODEJS = "nodejs";
+
+        private AutotuneConfigConstants() {
+        }
+
+    }
+
+    /**
+     * Contains constants related to KruizeLayer presence detection
+     */
+    public static final class LayerConstants {
+
+        /**
+         * Enum for different types of layer presence detection
+         */
+        public enum PresenceType {
+            ALWAYS,
+            QUERY,
+            LABEL
+        }
+
+        public static final String DEFAULT_PRESENCE = "always";
+
+        // PromQL label names used in query-based presence detection
+        public static final String LABEL_NAMESPACE = "namespace";
+        public static final String LABEL_CONTAINER = "container";
+
+        // Supported Layers
+        public static final String CONTAINER_LAYER = "container";
+        public static final String HOTSPOT_LAYER = "hotspot";
+        public static final String QUARKUS_LAYER = "quarkus";
+        public static final String SEMERU_LAYER = "semeru";
+
+        public static final List<String> SUPPORTED_LAYERS = Arrays.asList(
+                CONTAINER_LAYER,
+                HOTSPOT_LAYER,
+                QUARKUS_LAYER,
+                SEMERU_LAYER
+        );
+
+        /**
+         * Log messages for layer detection operations
+         */
+        public static final class LogMessages {
+            // Error messages
+            public static final String CONTAINER_NAME_NULL_OR_EMPTY = "Container name cannot be null or empty";
+            public static final String NAMESPACE_NULL_OR_EMPTY = "Namespace cannot be null or empty";
+
+            // Layer detection log messages
+            public static final String ERROR_DETECTING_LAYER = "Error detecting layer '{}': {}";
+            public static final String NO_LAYERS_DETECTED = "No layers detected for container '{}' in namespace '{}'";
+            public static final String LAYERS_DETECTED = "Detected {} layer(s) for container '{}': {}";
+            public static final String DETECTING_LAYERS = "Detecting layers for container '{}' in namespace '{}'";
+            public static final String LAYER_DETECTED = "Detected layer: '{}' for container '{}'";
+            public static final String LAYER_NOT_DETECTED = "Layer '{}' not detected for container '{}'";
+            public static final String NO_PRESENCE_DETECTOR = "Layer '{}' has no presence detector configured, skipping";
+            public static final String LABEL_BASED_PRESENCE_NOT_IMPLEMENTED = "Skipping layer '{}' configured with LabelBasedPresence: label-based presence detection is not yet implemented; this layer will not be auto-detected";
+            public static final String NO_LAYERS_IN_DB = "No layers found in database";
+            public static final String LOADED_LAYERS_FROM_DB = "Loaded {} layers from database";
+            public static final String FAILED_TO_LOAD_LAYERS = "Failed to load layers from database";
+
+            // QueryBasedPresence log messages
+            public static final String NO_QUERIES_DEFINED = "No queries defined for layer presence detection";
+            public static final String NULL_QUERY_ENCOUNTERED = "Encountered null query in layer presence queries, skipping";
+            public static final String DATASOURCE_NOT_FOUND = "Datasource '{}' not found in collection";
+            public static final String NO_OPERATOR_AVAILABLE = "No operator available for datasource '{}'";
+            public static final String EXECUTING_QUERY = "Executing layer detection query: {}";
+            public static final String LAYER_DETECTED_VIA_QUERY = "Layer detected via query in namespace '{}', container '{}'";
+            public static final String ERROR_EXECUTING_QUERY = "Error executing layer presence query for datasource '{}'";
+
+            // Tunable Spec messages
+            public static final String LAYER_NAME_N_TUNABLE_NAME_NOT_NULL = "layerName and tunableName must not be null";
+            public static final String LAYER_NAME_NOT_NULL = "layerName must not be null or empty";
+            public static final String TUNABLE_NAME_NOT_NULL = "tunableName must not be null or empty";
+
+            // Query validation log messages
+            public static final String QUERY_VALIDATION_NO_DATASOURCES = "No datasources available for query validation";
+            public static final String QUERY_VALIDATION_SKIP_NO_OPERATOR = "No operator available for datasource provider '{}', skipping datasource '{}'";
+            public static final String QUERY_VALIDATION_VALIDATING_SYNTAX = "Validating query syntax: {}";
+            public static final String QUERY_VALIDATION_SYNTAX_SUCCESS = "Query syntax validation successful for query: {}";
+            public static final String QUERY_VALIDATION_SYNTAX_FAILED = "Query validation failed for query '%s': %s";
+            public static final String QUERY_VALIDATION_COMPLETE = "Query syntax validation completed successfully for layer: {}";
+
+            private LogMessages() {
+            }
+        }
+
+        private LayerConstants() {
+        }
+    }
+
+    /**
+     * Contains Strings used in REST services
+     */
+    public static final class ServiceConstants {
+
+        public static final String JSON_CONTENT_TYPE = "application/json";
+        public static final String CHARACTER_ENCODING = "UTF-8";
+        public static final String EXPERIMENT_NAME = "experiment_name";
+        public static final String DEPLOYMENTS = "deployments";
+        public static final String DEPLOYMENT_NAME = "deployment_name";
+        public static final String NAMESPACE = "namespace";
+        public static final String CONTAINER_NAME = "container_name";
+        public static final String QUERY_URL = "query_url";
+        public static final String TRAINING = "training";
+        public static final String PRODUCTION = "production";
+        public static final String TOTAL_TRIALS = "total_trials";
+        public static final String TRIALS_COMPLETED = "trials_completed";
+        public static final String TRIALS_ONGOING = "trials_ongoing";
+        public static final String TRIALS_PASSED = "trials_passed";
+        public static final String TRIALS_FAILED = "trials_failed";
+        public static final String BEST_TRIAL = "best_trial";
+        public static final String TRIALS_SUMMARY = "trials_summary";
+        public static final String TRIAL_STATUS = "status";
+        public static final String TRIAL_NUMBER = "trial_number";
+        public static final String TRIAL_RESULT = "trial_result";
+        public static final String TRIAL_ERRORS = "trial_errors";
+        public static final String TRIAL_DURATION = "trial_duration";
+        public static final String EXPERIMENT_TRIALS = "experiment_trials";
+        public static final String NA = "NA";
+        public static final String SECONDS = " seconds";
+        public static final String LATEST = "latest";
+        public static final String EXPERIMENT_REGISTERED = "Registered successfully with Kruize! View registered experiments at /listExperiments";
+        public static final String RESULT_SAVED = "Results added successfully! View saved results at /listExperiments.";
+        public static final String DATASOURCE_NAME = "name";
+        public static final String DATASOURCE = "datasource";
+        public static final String DATASOURCE_PROVIDER = "provider";
+        public static final String CLUSTER_NAME = "cluster_name";
+        public static final String VERBOSE = "verbose";
+        public static final String FALSE = "false";
+        public static final String RM = "rm";
+        public static final String PERF_PROFILE_NAME = "name";
+
+        private ServiceConstants() {
+        }
+    }
+
+    /**
+     * Contains Strings used in the HOTSPOT Layer
+     */
+    public static final class HotspotConstants {
+
+        public static final String XXOPTION = " -XX:";
+        public static final String USE = "+Use";
+        public static final String SERVER = " -server";
+        public static final String ALLOW_PARALLEL_DEFINE_CLASS = "AllowParallelDefineClass";
+        public static final String ALLOW_VECTORIZE_ON_DEMAND = "AllowVectorizeOnDemand";
+        public static final String ALWAYS_COMPILE_LOOP_METHODS = "AlwaysCompileLoopMethods";
+        public static final String ALWAYS_PRE_TOUCH = "AlwaysPreTouch";
+        public static final String ALWAYS_TENURE = "AlwaysTenure";
+        public static final String BACKGROUND_COMPILATION = "BackgroundCompilation";
+        public static final String COMPILE_THRESHOLD = "CompileThreshold";
+        public static final String COMPILE_THRESHOLD_SCALING = "CompileThresholdScaling";
+        public static final String CONC_GC_THREADS = "ConcGCThreads";
+        public static final String DO_ESCAPE_ANALYSIS = "DoEscapeAnalysis";
+        public static final String FREQ_INLINE_SIZE = "FreqInlineSize";
+        public static final String GC = "gc";
+        public static final String INLINE_SMALL_CODE = "InlineSmallCode";
+        public static final String LOOP_UNROLL_LIMIT = "LoopUnrollLimit";
+        public static final String LOOP_UNROLL_MIN = "LoopUnrollMin";
+        public static final String MAX_INLINE_LEVEL = "MaxInlineLevel";
+        public static final String MAX_RAM_PERCENTAGE = "MaxRAMPercentage";
+        public static final String MIN_INLINING_THRESHOLD = "MinInliningThreshold";
+        public static final String MIN_SURVIVOR_RATIO = "MinSurvivorRatio";
+        public static final String NETTY_BUFFER_CHECK = "nettyBufferCheck";
+        public static final String NETTY_BUFFER_CHECKBOUNDS = "io.netty.buffer.checkBounds";
+        public static final String NETTY_BUFFER_CHECKACCESSIBLE = "io.netty.buffer.checkAccessible";
+        public static final String NEW_RATIO = "NewRatio";
+        public static final String PARALLEL_GC_THREADS = "ParallelGCThreads";
+        public static final String STACK_TRACE_IN_THROWABLE = "StackTraceInThrowable";
+        public static final String TIERED_COMPILATION = "TieredCompilation";
+        public static final String TIERED_STOP_AT_LEVEL = "TieredStopAtLevel";
+        public static final String USE_INLINE_CACHES = "UseInlineCaches";
+        public static final String USE_LOOP_PREDICATE = "UseLoopPredicate";
+        public static final String USE_STRING_DEDUPLICATION = "UseStringDeduplication";
+        public static final String USE_SUPER_WORD = "UseSuperWord";
+        public static final String USE_TYPE_SPECULATION = "UseTypeSpeculation";
+
+        private HotspotConstants() {
+        }
+
+    }
+
+    /**
+     * Contains Strings used in the QUARKUS Layer
+     */
+    public static final class QuarkusConstants {
+
+        public static final String QUARKUS = "quarkus";
+        public static final String DOPTION = " -D";
+
+        private QuarkusConstants() {
+        }
+
+    }
+
+    /**
+     * Contains Strings used in the Container Layer
+     */
+    public static final class ContainerConstants {
+
+        public static final String CPU_REQUEST = "cpuRequest";
+        public static final String MEM_REQUEST = "memoryRequest";
+
+        private ContainerConstants() {
+        }
+
+    }
+
+    public static class createExperimentParallelEngineConfigs {
+        /**
+         * MAX Queue size to stack experiments
+         */
+        public static int QUEUE_SIZE = 20000;
+        /**
+         * Core pool size is the minimum number of workers to keep alive
+         */
+        public static int CORE_POOL_SIZE = 100;
+        /**
+         * Maximum number of workers limit
+         */
+        public static int MAX_POOL_SIZE = 1000;
+        /**
+         * Timeout for idle threads waiting for work. Threads use this timeout when there are more than corePoolSize present or if allowCoreThreadTimeOut. Otherwise they wait forever for new work.
+         */
+        public static int CORE_POOL_KEEPALIVETIME_IN_SECS = 5;
+        /**
+         * the time between successive executions
+         */
+        public static int DELAY_IN_SECS = 2;
+        public static String EXECUTOR = "KRUIZE_EXECUTOR";
+
+        private createExperimentParallelEngineConfigs() {
+        }
+    }
+
+    public static class updateResultsParallelEngineConfigs {
+        /**
+         * MAX Queue size to stack experiments
+         */
+        public static int QUEUE_SIZE = 20000;
+        /**
+         * Core pool size is the minimum number of workers to keep alive
+         */
+        public static int CORE_POOL_SIZE = 100;
+        /**
+         * Maximum number of workers limit
+         */
+        public static int MAX_POOL_SIZE = 1000;
+        /**
+         * Timeout for idle threads waiting for work. Threads use this timeout when there are more than corePoolSize present or if allowCoreThreadTimeOut. Otherwise they wait forever for new work.
+         */
+        public static int CORE_POOL_KEEPALIVETIME_IN_SECS = 5;
+        /**
+         * the time between successive executions
+         */
+        public static int DELAY_IN_SECS = 2;
+        public static String EXECUTOR = "KRUIZE_EXECUTOR";
+
+    }
+
+    public static final class PerformanceProfileConstants {
+
+        public static final String PERFORMANCE_PROFILE_PLURALS = "kruizeperformanceprofiles";
+        public static final String PERFORMANCE_PROFILE_RESOURCE_NAME = PERFORMANCE_PROFILE_PLURALS + GROUP;
+        public static final String K8S_TYPE = "k8s_type";
+        public static final String PERF_PROFILE = "performanceProfile";
+        public static final String PERF_PROFILE_MAP = "performanceProfileMap";
+        public static final String METRIC_PROFILE_MAP = "metricProfileMap";
+        public static final String PERF_PROFILE_NAME = "name";
+        public static final String OBJECTIVE_FUNCTION = "objectiveFunction";
+        public static final String FUNCTION_VARIABLES = "functionVariables";
+        public static final String METRIC_PROFILE_NAME = "name";
+        public static final String VALUE_TYPE = "valueType";
+        public static final String SOURCE = "source";
+        public static final String PERFORMANCE_PROFILE_PKG = "com.autotune.analyzer.performanceProfiles.PerformanceProfileInterface.";
+        public static final String DEFAULT_PROFILE = "default";
+        public static final Double ZERO_VALUE = 0.0;
+
+        //Metric profile constants
+        public static final String DEFAULT_API_VERSION = "recommender.com/v1";
+        public static final String DEFAULT_KIND = "KruizePerformanceProfile";
+
+        // Perf profile names
+        public static final String RESOURCE_OPT_OPENSHIFT_PROFILE = "resource-optimization-openshift";
+        public static final String RESOURCE_OPT_LOCAL_MON_PROFILE = "resource-optimization-local-monitoring";
+
+        public static final Map<String, String> PerfProfileNames = Map.of(
+                RESOURCE_OPT_OPENSHIFT_PROFILE, "ResourceOptimizationOpenshiftImpl",
+                RESOURCE_OPT_LOCAL_MON_PROFILE, "ResourceOptimizationOpenshiftImpl"
+        );
+    }
+
+    public static final class MetadataProfileConstants {
+
+        public static final String QUERY_VARIABLES = "queryVariables";
+        public static final String METADATA_PROFILE_NAME = "name";
+        public static final String K8S_TYPE = "k8s_type";
+        public static final String METADATA_PROFILE_MAP = "metadataProfileMap";
+        public static final String VALUE_TYPE = "valueType";
+        public static final String DEFAULT_API_VERSION = "recommender.com/v1";
+        public static final String DEFAULT_KIND = "KruizeMetadataProfile";
+        public static final String DEFAULT_PROFILE = "default";
+        public static final String METADATA_PROFILE = "metadataProfile";
+        public static final String METADATA_PROFILE_PLURALS = "kruizemetadataprofiles";
+        public static final String METADATA_PROFILE_RESOURCE_NAME = METADATA_PROFILE_PLURALS + GROUP;
+        public static final String DATASOURCE = "datasource";
+        public static final String METADATA_PROFILE_NAME_PARAMETER = "metadataProfileName";
+        public static final String DEFAULT_DATASOURCE = "prometheus";
+        public static final String CLUSTER_METADATA_LOCAL_MON_PROFILE = "cluster-metadata-local-monitoring";
+        public static final String DEFAULT_MEASUREMENT_DURATION = "15min";
+        public static final String PROFILE_VERSION = "profileVersion";
+        public static final String METADATA = "metadata";
+        public static final String K8STYPE = "k8sType";
+        public static final String ADDITIONAL_LABEL = "ADDITIONAL_LABEL";
+    }
+
+    public static final class CommonProfileMsgs {
+        public static final String METHOD_NAME = "MethodName = {}";
+        public static final String INVALID_METHOD_NAME = "Method name {} doesn't exist!";
+        public static final String MISSING_MANDATORY_PARAMETERS = "Missing mandatory parameters: %s ";
+        public static final String VALIDATION_ERROR_MSG = "Validation error message :{}";
+    }
+
+    public static final class K8sObjectConstants {
+        private K8sObjectConstants() {
+
+        }
+
+        public static final class Types {
+            public static final String DEPLOYMENT = "deployment";
+            public static final String DEPLOYMENT_CONFIG = "deploymentConfig";
+            public static final String STATEFULSET = "statefulset";
+            public static final String REPLICASET = "replicaset";
+            public static final String REPLICATION_CONTROLLER = "replicationController";
+            public static final String DAEMONSET = "daemonset";
+            public static final String JOB = "job";
+
+            private Types() {
+
+            }
+        }
+    }
+
+    public static final class MetricNameConstants {
+        public static final String CPU_REQUEST = "cpuRequest";
+        public static final String CPU_LIMIT = "cpuLimit";
+        public static final String CPU_USAGE = "cpuUsage";
+        public static final String CPU_THROTTLE = "cpuThrottle";
+        public static final String MEMORY_REQUEST = "memoryRequest";
+        public static final String MEMORY_LIMIT = "memoryLimit";
+        public static final String MEMORY_USAGE = "memoryUsage";
+        public static final String MEMORY_RSS = "memoryRSS";
+
+        private MetricNameConstants() {
+
+        }
+
+    }
+
+    public static final class PercentileConstants {
+        public static final Integer FIFTIETH_PERCENTILE = 50;
+        public static final Integer NINETIETH_PERCENTILE = 90;
+        public static final Integer NINETY_FIFTH_PERCENTILE = 95;
+        public static final Integer NINETY_SIXTH_PERCENTILE = 96;
+        public static final Integer NINETY_SEVENTH_PERCENTILE = 97;
+        public static final Integer NINETY_EIGHTH_PERCENTILE = 98;
+        public static final Integer NINETY_NINTH_PERCENTILE = 99;
+        public static final Integer HUNDREDTH_PERCENTILE = 100;
+    }
+
+    public static final class BooleanString {
+        public static final String TRUE_DEFAULT = "True";
+        public static final String FALSE_DEFAULT = "False";
+        public static final String TRUE_LOWER = TRUE_DEFAULT.toLowerCase();
+        public static final String TRUE = TRUE_LOWER;
+        public static final String FALSE_LOWER = FALSE_DEFAULT.toLowerCase();
+        public static final String FALSE = FALSE_LOWER;
+        public static final String TRUE_UPPER = TRUE_DEFAULT.toUpperCase();
+        public static final String FALSE_UPPER = FALSE_DEFAULT.toUpperCase();
+
+        private BooleanString() {
+
+        }
+    }
+
+    public static final class VersionConstants {
+        public static final String CURRENT_KRUIZE_OBJECT_VERSION = "v2.0";
+
+        private VersionConstants() {
+
+        }
+
+        public static final class APIVersionConstants {
+            public static final String CURRENT_CREATE_EXPERIMENT_VERSION = "v2.0";
+            public static final String CURRENT_UPDATE_RESULTS_VERSION = "v2.0";
+            public static final String CURRENT_LIST_RECOMMENDATIONS_VERSION = "v3.0";
+            public static final String CURRENT_UPDATE_RECOMMENDATIONS_VERSION = "v3.0";
+            public static final String CURRENT_RECOMMENDATIONS_API_VERSION = "v1.0";
+
+            private APIVersionConstants() {
+
+            }
+        }
+    }
+
+    public static final class AutoscalerConstants {
+        private AutoscalerConstants() {
+
+        }
+
+        public static final int DEFAULT_SLEEP_INTERVAL = 60;
+        public static final int DEFAULT_INITIAL_DELAY = 30;
+
+        public static final String REGEX_FOR_DRY_RUN_ERROR = "Message: (.*?)(?=\\. Received status:)";
+
+        public static final class SupportedUpdaters {
+            public static final String VPA = "vpa";
+            public static final String ACCELERATOR = "accelerator";
+
+            private SupportedUpdaters() {
+
+            }
+        }
+
+        public static final class VPA {
+            public static final String VPA_PLURAL = "VerticalPodAutoscaler";
+            public static final String RECOMMENDERS = "recommenders";
+            public static final String RECOMMENDER_KEY = "name";
+            public static final String RECOMMENDER_NAME = "Kruize";
+            public static final String VPA_API_VERSION = "autoscaling.k8s.io/v1";
+            public static final String VPA_TARGET_REF_API_VERSION = "apps/v1";
+            public static final String VPA_TARGET_REF_KIND = "Deployment";
+
+
+            private VPA() {
+
+            }
+        }
+
+        public static final class InfoMsgs {
+            public static final String GENERATING_RECOMMENDATIONS = "Generating recommendations for experiment: {}";
+            public static final String GENERATED_RECOMMENDATIONS = "Generated recommendations for experiment: {}";
+            public static final String CHECKING_IF_UPDATER_INSTALLED = "Verifying if the updater is installed: {}";
+            public static final String FOUND_UPDATER_INSTALLED = "Found updater is installed: {}";
+            public static final String CHECKING_IF_VPA_PRESENT = "Checking for the presence of VPA with name: %s";
+            public static final String VPA_WITH_NAME_FOUND = "VPA with name %s found.";
+            public static final String VPA_WITH_NAME_NOT_FOUND = "VPA with name %s not found.";
+            public static final String RECOMMENDATION_VALUE = "%s request recommendations for container %s is %f";
+            public static final String VPA_PATCHED = "VPA object with name %s is patched successfully with recommendations.";
+            public static final String CREATEING_VPA = "Creating VPA with name: %s";
+            public static final String CREATED_VPA = "Created VPA with name: %s";
+            public static final String STARTING_SERVICE = "Starting recommendation updater.";
+            public static final String CHECKING_AUTO_EXP = "Searching for experiments with auto or recreate mode.";
+            public static final String FOUND_INSTASLICE = "Found Instaslice: {}";
+            public static final String NO_INSTASLICE_OBJECTS = "No Instaslice objects found in namespace: {}";
+            public static final String POD_READY = "Pod is ready to schedule.";
+            private InfoMsgs() {
+
+            }
+        }
+    }
+
+    /**
+     * Returns a PromQL filter string for unsupported workload types.
+     * This method generates a filter that excludes workload types not supported by Kruize.
+     * Currently, only DEPLOYMENT_CONFIG is unsupported.
+     * Uses case-insensitive regex matching to handle different naming conventions from various data sources.
+     *
+     * @return A string in the format 'workload_type!~"(?i)type1", workload_type!~"(?i)type2"'
+     *         or empty string if all types are supported
+     */
+    public static String getUnsupportedWorkloadTypesFilter() {
+        // List of unsupported K8S object types
+        List<K8S_OBJECT_TYPES> unsupportedTypes = Arrays.asList(
+            K8S_OBJECT_TYPES.DEPLOYMENT_CONFIG
+        );
+        
+        // Build the filter string with case-insensitive regex matching
+        StringBuilder filter = new StringBuilder();
+        for (K8S_OBJECT_TYPES type : unsupportedTypes) {
+            if (filter.length() > 0) {
+                filter.append(", ");
+            }
+            // Use regex with case-insensitive flag to match any case variation
+            // This handles: DeploymentConfig, deploymentConfig, deploymentconfig, etc.
+            String typeString = Utils.getAppropriateK8sObjectTypeString(type);
+            filter.append("workload_type!~").append("\"(?i)").append(typeString).append("\"");
+        }
+        
+        return filter.toString();
+    }
+}

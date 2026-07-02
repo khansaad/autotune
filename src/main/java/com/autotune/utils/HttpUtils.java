@@ -56,7 +56,7 @@ public class HttpUtils
 				connection = (HttpURLConnection) url.openConnection();
 			}
 
-			connection.setRequestProperty("Authorization", bearerToken);
+			connection.setRequestProperty(KruizeConstants.AuthenticationConstants.AUTHORIZATION, bearerToken);
 
 			if (connection.getResponseCode() == HttpsURLConnection.HTTP_OK) {
 				result = getDataFromConnection(connection);
@@ -65,7 +65,7 @@ public class HttpUtils
 					LOGGER.error("Please refresh your auth token");
 					System.exit(1);
 				}
-				LOGGER.debug("{} Response Failure for {}", connection.getResponseCode(),
+				LOGGER.error("{} Response Failure for {}", connection.getResponseCode(),
 						url.toString());
 			}
 		} catch (IOException e) {
@@ -89,32 +89,6 @@ public class HttpUtils
 
 		bufferedReader.close();
 		return response.toString();
-	}
-
-	public static void disableSSLVerification() {
-		TrustManager[] dummyTrustManager = new TrustManager[]{new X509TrustManager() {
-			public X509Certificate[] getAcceptedIssuers() {
-				return null;
-			}
-
-			public void checkClientTrusted(X509Certificate[] certs, String authType) { }
-
-			public void checkServerTrusted(X509Certificate[] certs, String authType) { }
-		}};
-
-		HostnameVerifier allHostsValid = (hostname, session) -> true;
-
-		SSLContext sslContext = null;
-		try {
-			sslContext = SSLContext.getInstance("SSL");
-			sslContext.init(null, dummyTrustManager, new java.security.SecureRandom());
-		} catch (NoSuchAlgorithmException | KeyManagementException e) {
-			e.printStackTrace();
-		}
-
-		assert sslContext != null;
-		HttpsURLConnection.setDefaultSSLSocketFactory(sslContext.getSocketFactory());
-		HttpsURLConnection.setDefaultHostnameVerifier(allHostsValid);
 	}
 
 	public static String postRequest(URL url, String content) {
