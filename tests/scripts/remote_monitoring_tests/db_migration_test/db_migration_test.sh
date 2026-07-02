@@ -28,6 +28,7 @@ CURRENT_DIR="$(dirname "$(realpath "$0")")"
 KRUIZE_REPO_PATH="${CURRENT_DIR}/../../../.."
 SCALE_TEST="${CURRENT_DIR}/../scale_test"
 REMOTE_MONITORING_TEST_DIR="${KRUIZE_REPO_PATH}/tests/scripts/remote_monitoring_tests"
+declare -l api_version
 
 # Source the common functions scripts
 . ${CURRENT_DIR}/../../common/common_functions.sh
@@ -55,13 +56,29 @@ kruize_image_current="quay.io/kruize/autotune_operator:0.0.20.1_rm"
 
 function usage() {
 	echo
-	echo "Usage: [-i Kruize image previous release] [-j kruize image current release] [-u No. of experiments (default - 5000)] [-d No. of days of results (default - 15)] [-n No. of clients (default - 20)] [-m results duration interval in mins, (default - 15)] [-t interval hours (default - 6)] [-s Initial start date (default - 2023-01-10T00:00:00.000Z)] [-q query db interval in mins, (default - 10)] [-r <resultsdir path>]"
+	echo "Usage: [-i Kruize image previous release] [-j kruize image current release] [-u No. of experiments (default - 5000)] [-d No. of days of results (default - 15)] [-n No. of clients (default - 20)] [-m results duration interval in mins, (default - 15)] [-t interval hours (default - 6)] [-s Initial start date (default - 2023-01-10T00:00:00.000Z)] [-q query db interval in mins, (default - 10)] [-r <resultsdir path>] [--api-version=v1|legacy]"
+	echo
+	echo "API Version Parameter:"
+	echo "  --api-version=v1      Use NEW v1 API (/kruize/api/v1/recommendations)"
+	echo "  --api-version=legacy  Use OLD/LEGACY APIs (/updateRecommendations, /generateRecommendations)"
+	echo "  Default: legacy (if no parameter specified)"
 	exit -1
 }
 
-while getopts r:i:j:u:d:t:n:m:s:f:q:h gopts
+while getopts r:i:j:u:d:t:n:m:s:f:q:h:-: gopts
 do
 	case ${gopts} in
+	-)
+		case "${OPTARG}" in
+			api-version=*)
+				api_version=${OPTARG#*=}
+				;;
+			*)
+				echo "Error: Invalid option --${OPTARG}"
+				usage
+				;;
+		esac
+		;;
 	r)
 		RESULTS_DIR="${OPTARG}"		
 		;;
@@ -100,6 +117,12 @@ do
 		;;
 	esac
 done
+
+echo "db_migration_test.sh :: api_version = ${api_version}"
+# Set the API version to default if not passed on parameter
+if [ -z "${api_version}" ]; then
+  api_version="legacy"
+fi
 
 start_time=$(get_date)
 
@@ -148,8 +171,8 @@ pushd ${SCALE_TEST} > /dev/null
 	restore_db=true
 	num_days_of_res=1
 
-	echo "./remote_monitoring_scale_test_bulk.sh -i ${kruize_image_current} -u ${num_exps} -d ${num_days_of_res} -n ${num_clients} -t ${interval_hours} -q ${query_db_interval} -s ${initial_start_date} -l ${restore_db} -f ${db_backup_file} -r ${LOG_DIR}/test_logs_50_16days -e ${total_results_count} -a migration" | tee -a ${LOG}
-	./remote_monitoring_scale_test_bulk.sh -i ${kruize_image_current} -u ${num_exps} -d ${num_days_of_res} -n ${num_clients} -t ${interval_hours} -q ${query_db_interval} -s ${initial_start_date} -l ${restore_db} -f ${db_backup_file} -r ${LOG_DIR}/test_logs_50_16days -e ${total_results_count} -a "migration"
+	echo "./remote_monitoring_scale_test_bulk.sh -i ${kruize_image_current} -u ${num_exps} -d ${num_days_of_res} -n ${num_clients} -t ${interval_hours} -q ${query_db_interval} -s ${initial_start_date} -l ${restore_db} -f ${db_backup_file} -r ${LOG_DIR}/test_logs_50_16days -e ${total_results_count} -a migration --api-version=${api_version}" | tee -a ${LOG}
+	./remote_monitoring_scale_test_bulk.sh -i ${kruize_image_current} -u ${num_exps} -d ${num_days_of_res} -n ${num_clients} -t ${interval_hours} -q ${query_db_interval} -s ${initial_start_date} -l ${restore_db} -f ${db_backup_file} -r ${LOG_DIR}/test_logs_50_16days -e ${total_results_count} -a "migration" --api-version=${api_version}
 
 	echo "" | tee -a ${LOG}
 	echo "" | tee -a ${LOG}
@@ -173,10 +196,15 @@ do
 
 	        reco_json_dir="${LOG_DIR}/reco_jsons"
         	mkdir -p ${reco_json_dir}
-        	echo "curl -s http://${SERVER_IP_ADDR}/listRecommendations?experiment_name=${exp_name}&rm=true" | tee -a ${LOG}
-	        curl -s "http://${SERVER_IP_ADDR}/listRecommendations?experiment_name=${exp_name}&rm=true" > ${reco_json_dir}/${exp_name}_reco.json
+        	if [[ "${api_version}" == "v1" ]]; then
+        	  echo "curl -s http://${SERVER_IP_ADDR}/kruize/api/v1/recommendations?experiment_name=${exp_name}&rm=true" | tee -a ${LOG}
+        	  curl -s "http://${SERVER_IP_ADDR}/kruize/api/v1/recommendations?experiment_name=${exp_name}&rm=true" > ${reco_json_dir}/${exp_name}_reco.json
+        	else
+        	  echo "curl -s http://${SERVER_IP_ADDR}/listRecommendations?experiment_name=${exp_name}&rm=true" | tee -a ${LOG}
+	          curl -s "http://${SERVER_IP_ADDR}/listRecommendations?experiment_name=${exp_name}&rm=true" > ${reco_json_dir}/${exp_name}_reco.json
+	        fi
 
-		python3 validate_reco_json.py -f ${reco_json_dir}/${exp_name}_reco.json -e ${end_time}
+		python3 validate_reco_json.py -f ${reco_json_dir}/${exp_name}_reco.json -e ${end_time} --api-version ${api_version}
 		if [ $? != 0 ]; then
 			failed=1
 		fi
