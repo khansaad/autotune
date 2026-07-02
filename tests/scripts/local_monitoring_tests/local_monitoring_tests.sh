@@ -19,6 +19,9 @@
 
 
 # Get the absolute path of current directory
+# Use BASH_SOURCE to get the correct path when script is sourced
+CURRENT_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
+KRUIZE_REPO="${CURRENT_DIR}/../../.."
 LOCAL_MONITORING_TEST_DIR="${KRUIZE_REPO}/tests/scripts/local_monitoring_tests"
 METRIC_PROFILE_DIR="${KRUIZE_REPO}/manifests/autotune/performance-profiles"
 
@@ -59,9 +62,44 @@ function local_monitoring_tests() {
 	TEST_SUITE_DIR="${RESULTS}/local_monitoring_tests"
 	KRUIZE_SETUP_LOG="${TEST_SUITE_DIR}/kruize_setup.log"
 	KRUIZE_POD_LOG="${TEST_SUITE_DIR}/kruize_pod.log"
+	LOG="${TEST_SUITE_DIR}/benchmark_setup.log"
 
 	mkdir -p ${TEST_SUITE_DIR}
 
+	# Install benchmarks
+	if [ ${skip_benchmark_setup} -eq 0 ]; then
+		APP_NAMESPACE="default"
+		BENCHMARKS=("tfb" "petclinic" "sysbench")
+		LOAD_JOBS=("petclinic-load-generator" "tfb-qrh-load-generator")
+
+		# Clone benchmarks repository if not present
+		if [ ! -d "benchmarks" ]; then
+			echo -n "Pulling required repositories... "
+			clone_repos benchmarks
+			echo "Done!"
+		fi
+
+		# Clean up any existing load jobs
+		echo -n "Cleaning up old load jobs... "
+		for job in "${LOAD_JOBS[@]}"; do
+			kubectl delete job ${job} -n ${APP_NAMESPACE} --ignore-not-found >> "${LOG}" 2>&1
+		done
+		echo "Done!"
+
+		# Install benchmarks
+		echo "Installing benchmarks (${BENCHMARKS[*]})..."
+		for bench in "${BENCHMARKS[@]}"; do
+			echo -n "  - Installing ${bench}... "
+			# Use kruize-demos for tfb and petclinic, default for sysbench
+			if [ "${bench}" == "sysbench" ]; then
+				benchmarks_install ${APP_NAMESPACE} ${bench} "default_manifests" >> "${LOG}" 2>&1
+			else
+				benchmarks_install ${APP_NAMESPACE} ${bench} "kruize-demos" >> "${LOG}" 2>&1
+			fi
+		done
+		echo "All benchmarks installed!"
+
+	fi
 	# Setup kruize
 	if [ ${skip_setup} -eq 0 ]; then
 		pushd "${KRUIZE_REPO}" > /dev/null
@@ -91,7 +129,24 @@ function local_monitoring_tests() {
 		echo "Skipping kruize setup..." | tee -a ${LOG}
 	fi
 
+		# Wait for data to be available for recommendations (30 mins)
+		echo "Waiting for metrics data collection..."
+		echo "This will take 30 minutes. Progress updates every 5 minutes..."
 
+		# Sleep in smaller intervals with progress updates to avoid appearing stuck
+		total_sleep=180
+		interval=30  # 5 minutes
+		elapsed=0
+
+		while [ $elapsed -lt $total_sleep ]; do
+			sleep $interval
+			elapsed=$((elapsed + interval))
+			remaining=$((total_sleep - elapsed))
+			minutes_remaining=$((remaining / 60))
+			echo "Still waiting... approximately $minutes_remaining minutes remaining ($(date))"
+		done
+
+		echo "Data collection period complete! ($(date))"
 	# If testcase is not specified run all tests
 	if [ -z "${testcase}" ]; then
 		testtorun=("${local_monitoring_tests[@]}")
@@ -207,4 +262,12 @@ function local_monitoring_tests() {
 
 	# print the testsuite summary
 	testsuitesummary ${FUNCNAME} ${elapsed_time} ${FAILED_CASES}
+
+	# Cleanup benchmarks directory
+	if [ -d "benchmarks" ]; then
+		echo ""
+		echo "Cleaning up benchmarks directory..."
+		rm -rf benchmarks
+		echo "Benchmarks directory removed"
+	fi
 }
