@@ -154,9 +154,13 @@ total_results_count=$((${num_exps} * ${num_clients} * ${num_days_of_res} * 96))
 # Backup DB
 echo "" | tee -a ${LOG}
 echo "Backing up DB..." | tee -a ${LOG}
-db_backup_file="${LOG_DIR}/test_logs_50_15days/db_backup.sql"
-echo "kubectl -n openshift-tuning exec -it `kubectl get pods -o=name -n openshift-tuning | grep kruize-db` -- pg_dump -U admin -d kruizeDB > ${db_backup_file}" | tee -a ${LOG}
-kubectl -n openshift-tuning exec -it `kubectl get pods -o=name -n openshift-tuning | grep kruize-db` -- pg_dump -U admin -d kruizeDB > ${db_backup_file}
+kruize_db_pod=$(kubectl get pods -o=name -n ${NAMESPACE} | grep kruize-db | cut -d '/' -f2)
+db_backup_file="${LOG_DIR}/test_logs_50_15days/db_backup.dmp"
+db_file=$(basename ${db_backup_file})
+echo "kubectl -n ${NAMESPACE} exec -it `kubectl get pods -o=name -n ${NAMESPACE} | grep kruize-db` -- pg_dump -U admin -d kruizeDB -Fc -b -v -f ${db_file}" | tee -a ${LOG}
+kubectl -n ${NAMESPACE} exec -it `kubectl get pods -o=name -n ${NAMESPACE} | grep kruize-db` -- pg_dump -U admin -d kruizeDB -Fc -b -v -f ${db_file} | tee -a ${LOG}
+echo "kubectl cp ${NAMESPACE}/${kruize_db_pod}:${db_file} ${db_backup_file}" | tee -a ${LOG}
+kubectl cp ${NAMESPACE}/${kruize_db_pod}:${db_file} ${db_backup_file} | tee -a ${LOG}
 echo "Backing up DB...Done" | tee -a ${LOG}
 echo "" | tee -a ${LOG}
 
