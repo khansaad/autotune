@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS kruize_bulk_profile (
     profile_name VARCHAR(255) PRIMARY KEY,
-    cluster_name VARCHAR(255) NOT NULL,
+    clusters JSONB NOT NULL,
     datasources JSONB NOT NULL,
     namespaces JSONB NOT NULL,
     labels JSONB,
