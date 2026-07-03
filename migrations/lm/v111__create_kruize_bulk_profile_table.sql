@@ -1,10 +1,10 @@
-CREATE TABLE IF NOT EXISTS kruize_bulk_profile (
-    profile_name VARCHAR(255) PRIMARY KEY,
-    clusters JSONB NOT NULL,
-    datasources JSONB NOT NULL,
-    namespaces JSONB NOT NULL,
+CREATE TABLE IF NOT EXISTS optimizer_bulk_config (
+    config_name VARCHAR(255) NOT NULL,
+    cluster_name VARCHAR(255) PRIMARY KEY,
+    datasources TEXT[] NOT NULL,
+    namespaces TEXT[] NOT NULL,
     labels JSONB,
-    experiment_types JSONB NOT NULL,
+    experiment_types TEXT[] NOT NULL,
     metadata_profile VARCHAR(255),
     performance_profile VARCHAR(255) NOT NULL,
     trial_settings JSONB,
@@ -13,4 +13,4 @@ CREATE TABLE IF NOT EXISTS kruize_bulk_profile (
     enabled BOOLEAN NOT NULL DEFAULT true,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
+);
