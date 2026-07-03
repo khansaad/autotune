@@ -143,7 +143,7 @@ pushd ${SCALE_TEST} > /dev/null
 	echo "" | tee -a ${LOG}
 	echo "Run scalability test to load 50 exps / 15 days data and update Recommendations with ${kruize_image_prev}" | tee -a ${LOG}
 	echo "./remote_monitoring_scale_test_bulk.sh -i ${kruize_image_prev} -u ${num_exps} -d ${num_days_of_res} -n ${num_clients} -t ${interval_hours} -q ${query_db_interval} -s ${initial_start_date} -r ${LOG_DIR}/test_logs_50_15days -a migration -g ${replicas}" | tee -a ${LOG}
-	./remote_monitoring_scale_test_bulk.sh -i ${kruize_image_prev} -u ${num_exps} -d ${num_days_of_res} -n ${num_clients} -t ${interval_hours} -q ${query_db_interval} -s ${initial_start_date} -r ${LOG_DIR}/test_logs_50_15days -a "migration" -g ${replicas} 
+	./remote_monitoring_scale_test_bulk.sh -i ${kruize_image_prev} -u ${num_exps} -d ${num_days_of_res} -n ${num_clients} -t ${interval_hours} -q ${query_db_interval} -s ${initial_start_date} -r ${LOG_DIR}/test_logs_50_15days -a "migration" -g ${replicas}
 popd > /dev/null
 	echo "" | tee -a ${LOG}
 
