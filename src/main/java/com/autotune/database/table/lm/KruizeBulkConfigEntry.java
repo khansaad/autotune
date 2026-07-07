@@ -40,7 +40,7 @@ public class KruizeBulkConfigEntry {
 
     @Id
     @Column(name = "config_name", columnDefinition = "VARCHAR(255)")
-    private String profileName;
+    private String configName;
 
     @Column(name = "cluster_name", columnDefinition = "VARCHAR(255)", nullable = false)
     private String clusterName;
@@ -91,12 +91,12 @@ public class KruizeBulkConfigEntry {
     public KruizeBulkConfigEntry() {
     }
 
-    public String getProfileName() {
-        return profileName;
+    public String getConfigName() {
+        return configName;
     }
 
-    public void setProfileName(String profileName) {
-        this.profileName = profileName;
+    public void setConfigName(String profileName) {
+        this.configName = profileName;
     }
 
     public String getClusterName() {
@@ -207,7 +207,7 @@ public class KruizeBulkConfigEntry {
     @Override
     public String toString() {
         return "KruizeBulkProfileEntry{" +
-                "profileName='" + profileName + '\'' +
+                "configName='" + configName + '\'' +
                 ", clusterName='" + clusterName + '\'' +
                 ", datasources=" + datasources +
                 ", namespaces=" + namespaces +
