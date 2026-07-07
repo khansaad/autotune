@@ -95,8 +95,8 @@ public class KruizeBulkConfigEntry {
         return configName;
     }
 
-    public void setConfigName(String profileName) {
-        this.configName = profileName;
+    public void setConfigName(String configName) {
+        this.configName = configName;
     }
 
     public String getClusterName() {
