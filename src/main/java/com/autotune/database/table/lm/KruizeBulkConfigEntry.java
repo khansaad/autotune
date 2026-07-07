@@ -29,17 +29,17 @@ import org.slf4j.LoggerFactory;
 import java.sql.Timestamp;
 
 /**
- * Database entity to store Kruize bulk profile configurations.
+ * Database entity to store Kruize optimiser bulk configuration.
  * Aligned with CreateExperiment structure for consistency.
  */
 @Entity
-@Table(name = "kruize_bulk_profile")
-public class KruizeBulkProfileEntry {
-    private static final Logger LOGGER = LoggerFactory.getLogger(KruizeBulkProfileEntry.class);
+@Table(name = "kruize_optimiser_bulk_config")
+public class KruizeBulkConfigEntry {
+    private static final Logger LOGGER = LoggerFactory.getLogger(KruizeBulkConfigEntry.class);
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     @Id
-    @Column(name = "profile_name", columnDefinition = "VARCHAR(255)")
+    @Column(name = "config_name", columnDefinition = "VARCHAR(255)")
     private String profileName;
 
     @Column(name = "cluster_name", columnDefinition = "VARCHAR(255)", nullable = false)
@@ -88,7 +88,7 @@ public class KruizeBulkProfileEntry {
     private Timestamp updatedAt;
 
     // Default constructor
-    public KruizeBulkProfileEntry() {
+    public KruizeBulkConfigEntry() {
     }
 
     public String getProfileName() {
