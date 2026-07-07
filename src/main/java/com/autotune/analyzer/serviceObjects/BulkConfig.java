@@ -24,12 +24,12 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Service object representing a Bulk Profile configuration.
+ * Service object representing an Optimiser Bulk Configuration.
  * Aligned with CreateExperiment API structure for consistency.
  */
-public class BulkProfile {
-    @JsonProperty("profile_name")
-    private String profileName;
+public class BulkConfig {
+    @JsonProperty("config_name")
+    private String configName;
 
     @JsonProperty("cluster_name")
     private String clusterName;
@@ -46,7 +46,7 @@ public class BulkProfile {
     @JsonProperty("metadata_profile")
     private String metadataProfile;
 
-    @JsonProperty("performanceProfile")
+    @JsonProperty("performance_profile")
     private String performanceProfile;
 
     @JsonProperty("trial_settings")
@@ -66,15 +66,15 @@ public class BulkProfile {
     @JsonProperty("updated_at")
     private Instant updatedAt;
 
-    public BulkProfile() {
+    public BulkConfig() {
     }
 
-    public String getProfileName() {
-        return profileName;
+    public String getConfigName() {
+        return configName;
     }
 
-    public void setProfileName(String profileName) {
-        this.profileName = profileName;
+    public void setConfigName(String configName) {
+        this.configName = configName;
     }
 
     public String getClusterName() {
@@ -190,7 +190,7 @@ public class BulkProfile {
     }
 
     /**
-     * Trial settings for the bulk profile (matches CreateExperiment structure)
+     * Trial settings for the optimiser bulk config (matches CreateExperiment structure)
      */
     public static class TrialSettings {
         @JsonProperty("measurement_duration")
@@ -213,7 +213,7 @@ public class BulkProfile {
     }
 
     /**
-     * Recommendation settings for the bulk profile
+     * Recommendation settings for the optimiser bulk config
      */
     public static class RecommendationSettings {
         private String scheduling;
