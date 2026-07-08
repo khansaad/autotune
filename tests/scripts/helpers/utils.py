@@ -885,7 +885,8 @@ def validate_container(update_results_container, update_results_json, list_reco_
 
                 current_config = list_reco_container["recommendations"]["data"][interval_end_time]["current"]
                 if pytest.USE_NEW_API:
-                    current_config.update(current_config.pop("resources"))
+                    if "resources" in current_config:
+                        current_config.update(current_config.pop("resources"))
                 # validate current config
                 assert current_config is not None
                 validate_current(current_config, CONTAINER_EXPERIMENT_TYPE)
@@ -997,7 +998,8 @@ def validate_namespace(update_results_namespace, update_results_json, list_reco_
                 terms_obj = list_reco_namespace["recommendations"]["data"][interval_end_time]["recommendation_terms"]
                 current_config = list_reco_namespace["recommendations"]["data"][interval_end_time]["current"]
                 if pytest.USE_NEW_API:
-                    current_config.update(current_config.pop("resources"))
+                    if "resources" in current_config:
+                        current_config.update(current_config.pop("resources"))
                 duration_terms = {'short_term': 4, 'medium_term': 7, 'long_term': 15}
                 for term in duration_terms.keys():
                     if check_if_recommendations_are_present(terms_obj[term]):
@@ -1093,7 +1095,8 @@ def validate_local_monitoring_container(create_exp_container, list_reco_containe
 
         current_config = list_reco_container["recommendations"]["data"][interval_end_time]["current"]
         if pytest.USE_NEW_API:
-            current_config.update(current_config.pop("resources"))
+            if "resources" in current_config:
+                current_config.update(current_config.pop("resources"))
         # validate current config
         assert current_config is not None
         validate_current(current_config, CONTAINER_EXPERIMENT_TYPE)
@@ -1193,7 +1196,8 @@ def validate_local_monitoring_namespace(create_exp_namespace, list_reco_namespac
         terms_obj = list_reco_namespace["recommendations"]["data"][interval_end_time]["recommendation_terms"]
         current_config = list_reco_namespace["recommendations"]["data"][interval_end_time]["current"]
         if pytest.USE_NEW_API:
-            current_config.update(current_config.pop("resources"))
+            if "resources" in current_config:
+                current_config.update(current_config.pop("resources"))
         duration_terms = {'short_term': 4, 'medium_term': 7, 'long_term': 15}
         for term in duration_terms.keys():
             if check_if_recommendations_are_present(terms_obj[term]):

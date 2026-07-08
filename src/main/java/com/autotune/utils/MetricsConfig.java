@@ -15,8 +15,9 @@ import io.micrometer.prometheus.PrometheusMeterRegistry;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class MetricsConfig {
-    
-    public static Timer timerListRec, timerListExp, timerCreateExp, timerUpdateResults, timerUpdateRecomendations, timerRecommendationResource;
+
+    public static Timer timerPOSTRecommendations, timerGETRecommendations;
+    public static Timer timerListRec, timerListExp, timerCreateExp, timerUpdateResults, timerUpdateRecomendations;
     public static Timer timerLoadRecExpName, timerLoadResultsExpName, timerLoadExpName, timerLoadRecExpNameDate, timerLoadBulkJobId, timerUpdateBulkJobId,  timerBoxPlots, timerUpdateExpDate;
     public static Timer timerLoadAllRec, timerLoadAllExp, timerLoadAllResults;
     public static Timer timerAddRecDB, timerAddResultsDB, timerAddExpDB, timerAddBulkResultsDB, timerSaveBulkJobDB, timerAddBulkJob;
@@ -26,7 +27,8 @@ public class MetricsConfig {
     public static Timer timerImportMetadata, timerGetMetadata;
     public static Timer timerJobStatus, timerCreateBulkJob, timerGetExpMap, timerCreateBulkExp, timerGenerateBulkRec, timerRunJob;
     public static Counter timerKruizeNotifications , timerBulkJobs;
-    public static Timer.Builder timerBListRec, timerBListExp, timerBCreateExp, timerBUpdateResults, timerBUpdateRecommendations, timerBUpdateExpDate, timerBRecommendationResource;
+    public static Timer.Builder timerBListRec, timerBListExp, timerBCreateExp, timerBUpdateResults, timerBUpdateRecommendations, timerBUpdateExpDate;
+    public static Timer.Builder timerBPOSTRecommendations, timerBGETRecommendations;
     public static Timer.Builder timerBLoadRecExpName, timerBLoadResultsExpName, timerBLoadExpName, timerBLoadRecExpNameDate, timerBBoxPlots;
     public static Timer.Builder timerBLoadAllRec, timerBLoadAllExp, timerBLoadAllResults;
     public static Timer.Builder timerBAddRecDB, timerBAddResultsDB, timerBAddExpDB, timerBAddBulkResultsDB, timerBLoadBulkJobId, timerBUpdateBulkJobId, timerBSaveBulkJobDB, timerBaddBulkJob;
@@ -60,7 +62,6 @@ public class MetricsConfig {
         timerBCreateExp = Timer.builder("kruizeAPI").description(API_METRIC_DESC).tag("api", "createExperiment").tag("method", "POST");
         timerBUpdateResults = Timer.builder("kruizeAPI").description(API_METRIC_DESC).tag("api", "updateResults").tag("method", "POST");
         timerBUpdateRecommendations = Timer.builder("kruizeAPI").description(API_METRIC_DESC).tag("api", "updateRecommendations").tag("method", "POST");
-        timerBRecommendationResource = Timer.builder("kruizeAPI").description(API_METRIC_DESC).tag("api", "recommendations").tag("method", "POST");
 
         timerBLoadRecExpName = Timer.builder("kruizeDB").description(DB_METRIC_DESC).tag("method", "loadRecommendationsByExperimentName");
         timerBLoadRecExpNameDate = Timer.builder("kruizeDB").description(DB_METRIC_DESC).tag("method", "loadRecommendationsByExperimentNameAndDate");
@@ -110,6 +111,9 @@ public class MetricsConfig {
         timerBAddLayerDB = Timer.builder("kruizeDB").description(DB_METRIC_DESC).tag("method", "addLayerToDB");
         timerBLoadAllLayers = Timer.builder("kruizeDB").description(DB_METRIC_DESC).tag("method", "loadAllLayers");
         timerBLoadLayerByName = Timer.builder("kruizeDB").description(DB_METRIC_DESC).tag("method", "loadLayerByName");
+
+        timerBPOSTRecommendations = Timer.builder("kruizeAPI").description(API_METRIC_DESC).tag("api", "recommendations").tag("method", "POST");
+        timerBGETRecommendations = Timer.builder("kruizeAPI").description(API_METRIC_DESC).tag("api", "recommendations").tag("method", "GET");
 
         new ClassLoaderMetrics().bindTo(meterRegistry);
         new ProcessorMetrics().bindTo(meterRegistry);

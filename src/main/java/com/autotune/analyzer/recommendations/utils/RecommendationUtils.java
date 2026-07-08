@@ -71,7 +71,9 @@ public class RecommendationUtils {
                     currentValue = metricAggregationInfoResults.getAvg();
                     format = metricAggregationInfoResults.getFormat();
                 }
-            } else if (metricName == AnalyzerConstants.MetricName.podCount) { // fallback for replicas in case podCount metrics is unavailable
+            }
+            // fallback for replicas in case podCount metrics is unavailable or empty
+            if ((currentValue == null || currentValue == 0.0) && metricName == AnalyzerConstants.MetricName.podCount) {
                 if (currentDatapoint.getMetricResultsMap().containsKey(AnalyzerConstants.MetricName.cpuUsage)) {
                     MetricResults cpuMetricResults = currentDatapoint.getMetricResultsMap().get(AnalyzerConstants.MetricName.cpuUsage);
                     currentValue = getPodCount(cpuMetricResults.getAggregationInfoResult());

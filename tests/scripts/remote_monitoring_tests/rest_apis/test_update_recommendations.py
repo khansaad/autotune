@@ -1171,7 +1171,7 @@ def test_update_recommendations_with_perf_profile_single_pod(cluster_type):
         }
     ]
 
-    perf_profile_v1_json_file = "../json_files/resource_optimization_openshift_v1.json"
+    perf_profile_v1_json_file = "../json_files/resource_optimization_openshift_v2.json"
     perf_profile_dir = get_metric_profile_dir()
     perf_profile_v2_json_file = perf_profile_dir / 'resource_optimization_openshift.json'
 
@@ -1438,7 +1438,7 @@ def test_update_recommendations_with_perf_profile_multi_pod(cluster_type):
         }
     ]
 
-    perf_profile_v1_json_file = "../json_files/resource_optimization_openshift_v1.json"
+    perf_profile_v1_json_file = "../json_files/resource_optimization_openshift_v2.json"
     perf_profile_dir = get_metric_profile_dir()
     perf_profile_v3_json_file = perf_profile_dir / 'resource_optimization_openshift.json'
 

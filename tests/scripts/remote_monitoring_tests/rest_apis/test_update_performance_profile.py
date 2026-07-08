@@ -48,7 +48,7 @@ def test_update_performance_profile(cluster_type):
     """
     # Form the kruize url
     form_kruize_url(cluster_type)
-    perf_profile_json_file = "../json_files/resource_optimization_openshift_v1.json"
+    perf_profile_json_file = "../json_files/resource_optimization_openshift_v2.json"
     # Delete any existing profile
     response = delete_performance_profile(perf_profile_json_file)
     print("delete API status code = ", response.status_code)
@@ -105,7 +105,7 @@ def test_update_performance_profile_with_duplicate_data(cluster_type):
     """
     # Form the kruize url
     form_kruize_url(cluster_type)
-    perf_profile_json_file = "../json_files/resource_optimization_openshift_v1.json"
+    perf_profile_json_file = "../json_files/resource_optimization_openshift_v2.json"
     # Delete any existing profile
     response = delete_performance_profile(perf_profile_json_file)
     print("delete API status code = ", response.status_code)
@@ -167,7 +167,7 @@ def test_update_performance_profile_with_duplicate_slo_data(cluster_type):
     """
     # Form the kruize url
     form_kruize_url(cluster_type)
-    perf_profile_json_file = "../json_files/resource_optimization_openshift_v1.json"
+    perf_profile_json_file = "../json_files/resource_optimization_openshift_v2.json"
     # Delete any existing profile
     response = delete_performance_profile(perf_profile_json_file)
     print("delete API status code = ", response.status_code)
@@ -261,7 +261,7 @@ def test_update_performance_profile_with_invalid_superset(cluster_type):
     """
     # Form the kruize url
     form_kruize_url(cluster_type)
-    perf_profile_json_file = "../json_files/resource_optimization_openshift_v1.json"
+    perf_profile_json_file = "../json_files/resource_optimization_openshift_v2.json"
     # Delete any existing profile
     response = delete_performance_profile(perf_profile_json_file)
     print("delete API status code = ", response.status_code)
@@ -313,7 +313,7 @@ def test_update_performance_profiles_mandatory_fields(cluster_type, field, expec
 
     # Form the kruize url
     form_kruize_url(cluster_type)
-    input_json_file_v1 = "../json_files/resource_optimization_openshift_v1.json"
+    input_json_file_v1 = "../json_files/resource_optimization_openshift_v2.json"
     input_json_file = perf_profile_dir / 'resource_optimization_openshift.json'
     # Delete any existing profile
     response = delete_performance_profile(input_json_file_v1)

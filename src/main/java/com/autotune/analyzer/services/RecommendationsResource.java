@@ -104,7 +104,7 @@ public class RecommendationsResource extends HttpServlet {
     ) throws ServletException, IOException {
         LOGGER.info("RecommendationsResource GET request received");
         String statusValue = KruizeConstants.APIMessages.FAILURE;
-        Timer.Sample timerListRec = Timer.start(MetricsConfig.meterRegistry());
+        Timer.Sample timer = Timer.start(MetricsConfig.meterRegistry());
 
         response.setContentType(JSON_CONTENT_TYPE);
         response.setCharacterEncoding(CHARACTER_ENCODING);
@@ -242,9 +242,9 @@ public class RecommendationsResource extends HttpServlet {
             e.printStackTrace();
             sendErrorResponse(response, e, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
         } finally {
-            MetricsConfig.timerListRec = MetricsConfig.timerBListRec.tag("status", statusValue)
+            MetricsConfig.timerGETRecommendations = MetricsConfig.timerBGETRecommendations.tag("status", statusValue)
                     .register(MetricsConfig.meterRegistry());
-            timerListRec.stop(MetricsConfig.timerListRec);
+            timer.stop(MetricsConfig.timerGETRecommendations);
         }
     }
 
@@ -261,7 +261,7 @@ public class RecommendationsResource extends HttpServlet {
         int calCount = counter.incrementAndGet();
         LOGGER.debug("RecommendationsResource POST request received - count: {}", calCount);
         String statusValue = KruizeConstants.APIMessages.FAILURE;
-        Timer.Sample timerBRecommendationResource = Timer.start(MetricsConfig.meterRegistry());
+        Timer.Sample timer = Timer.start(MetricsConfig.meterRegistry());
         
         try {
             request.setCharacterEncoding(CHARACTER_ENCODING);
@@ -314,10 +314,10 @@ public class RecommendationsResource extends HttpServlet {
             sendErrorResponse(response, e, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
         } finally {
             LOGGER.debug("RecommendationsResource POST completed - count: {}", calCount);
-            MetricsConfig.timerRecommendationResource = MetricsConfig.timerBRecommendationResource
+            MetricsConfig.timerPOSTRecommendations = MetricsConfig.timerBPOSTRecommendations
                     .tag(KruizeConstants.DataSourceConstants.DataSourceQueryJSONKeys.STATUS, statusValue)
                     .register(MetricsConfig.meterRegistry());
-            timerBRecommendationResource.stop(MetricsConfig.timerRecommendationResource);
+            timer.stop(MetricsConfig.timerPOSTRecommendations);
         }
     }
 

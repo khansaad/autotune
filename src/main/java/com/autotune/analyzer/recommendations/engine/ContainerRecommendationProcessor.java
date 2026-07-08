@@ -125,7 +125,7 @@ public final class ContainerRecommendationProcessor extends BaseRecommendationPr
         RecommendationConfigItem configItem = RecommendationUtils.getCurrentValue(lastDatapoint, AnalyzerConstants.MetricName.podCount, notifications);
         if (configItem != null && configItem.getAmount() != null) {
             // RecommendationUtils.getCurrentValue ensured that configItem.getAmount() is never 0. It can be 'null'.
-            int replicas = (int) Math.ceil(configItem.getAmount());
+            int replicas = (int) Math.round(configItem.getAmount());
             currentConfig.setReplicas(replicas);
             LOGGER.debug("Current replicas for workload '{}' is {}", containerData.getContainer_name(), replicas);
         }
@@ -383,6 +383,10 @@ public final class ContainerRecommendationProcessor extends BaseRecommendationPr
             // 2. Calculate from 'cpuUsage' datapoints using formulae avg of 'sum/avg', min of 'sum/avg', max of 'sum/avg'
             if (null == metricAggregationInfoResults) {
                 metricAggregationInfoResults = getPodCountAggrInfoFromMetric(filteredResultsMap, AnalyzerConstants.MetricName.cpuUsage);
+                if (metricAggregationInfoResults != null) {
+                    if (notifications != null)
+                        notifications.add(new RecommendationNotification(RecommendationConstants.RecommendationNotification.NOTICE_POD_COUNT_DERIVED_FROM_CPU));
+                }
             }
 
             // 3. Calculate from 'memoryUsage' datapoints using formulae avg of 'sum/avg', min of 'sum/avg', max of 'sum/avg'
@@ -391,13 +395,13 @@ public final class ContainerRecommendationProcessor extends BaseRecommendationPr
                 if (null != metricAggregationInfoResults) {
                     if (notifications != null)
                         notifications.add(new RecommendationNotification(RecommendationConstants.RecommendationNotification.NOTICE_POD_COUNT_DERIVED_FROM_MEMORY));
-                } else {
-                    if (notifications != null)
-                        notifications.add(new RecommendationNotification(RecommendationConstants.RecommendationNotification.ERROR_NOT_ENOUGH_DATA_FOR_POD_COUNT));
                 }
-            } else {
+            }
+
+            if (null == metricAggregationInfoResults) {
+                // Unable to calculate pod count aggregation values
                 if (notifications != null)
-                    notifications.add(new RecommendationNotification(RecommendationConstants.RecommendationNotification.NOTICE_POD_COUNT_DERIVED_FROM_CPU));
+                    notifications.add(new RecommendationNotification(RecommendationConstants.RecommendationNotification.ERROR_NOT_ENOUGH_DATA_FOR_POD_COUNT));
             }
         }
 
@@ -444,9 +448,9 @@ public final class ContainerRecommendationProcessor extends BaseRecommendationPr
                 }
             }
             metricAggregationInfoResults = new MetricAggregationInfoResults();
-            metricAggregationInfoResults.setAvg(Math.ceil(avg));
-            metricAggregationInfoResults.setMin(Math.ceil(min));
-            metricAggregationInfoResults.setMax(Math.ceil(max));
+            metricAggregationInfoResults.setAvg((double) Math.round(avg));
+            metricAggregationInfoResults.setMin((double) Math.round(min));
+            metricAggregationInfoResults.setMax((double) Math.round(max));
         }
 
         LOGGER.debug("Aggregation Info for metric {}: avg = {} min={}, max={}", metricName, avg, min, max);

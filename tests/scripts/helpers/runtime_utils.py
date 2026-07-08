@@ -645,7 +645,7 @@ def _generate_and_list_recommendations_for_petclinic(
         list_reco_json = response.json()
 
         error_msg = validate_list_reco_json(list_reco_json, list_reco_json_local_monitoring_schema)
-        assert error_msg == ""
+        assert error_msg == "", f"error_msg = {error_msg}"
 
         validate_local_monitoring_recommendation_data_present(list_reco_json)
         return list_reco_json
