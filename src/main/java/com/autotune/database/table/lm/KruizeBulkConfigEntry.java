@@ -73,7 +73,7 @@ public class KruizeBulkConfigEntry {
     @Column(name = "webhook_url", columnDefinition = "VARCHAR(500)")
     private String webhookUrl;
 
-    @Column(name = "enabled")
+    @Column(name = "enabled", nullable = false)
     private Boolean enabled;
 
     @Column(name = "created_at")
