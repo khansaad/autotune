@@ -15,6 +15,8 @@
  *******************************************************************************/
 package com.autotune.database.table.lm;
 
+import com.autotune.analyzer.serviceObjects.BulkConfig;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.Column;
@@ -27,6 +29,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Database entity to store Kruize optimiser bulk configuration.
@@ -203,6 +209,189 @@ public class KruizeBulkConfigEntry {
         this.updatedAt = updatedAt;
     }
 
+    /**
+     * Convert this entity to a BulkConfig service object
+     */
+    public BulkConfig toBulkConfig() {
+        BulkConfig config = new BulkConfig();
+        config.setConfigName(this.configName);
+        config.setClusterName(this.clusterName);
+        
+        // Convert JsonNode to List<String> for datasources
+        if (this.datasources != null) {
+            try {
+                List<String> datasourceList = objectMapper.convertValue(
+                    this.datasources,
+                    new TypeReference<List<String>>() {}
+                );
+                config.setDatasources(datasourceList);
+            } catch (Exception e) {
+                LOGGER.error("Error converting datasources: {}", e.getMessage());
+                config.setDatasources(new ArrayList<>());
+            }
+        }
+        
+        // Convert JsonNode to List<String> for namespaces
+        if (this.namespaces != null) {
+            try {
+                List<String> namespaceList = objectMapper.convertValue(
+                    this.namespaces,
+                    new TypeReference<List<String>>() {}
+                );
+                config.setNamespaces(namespaceList);
+            } catch (Exception e) {
+                LOGGER.error("Error converting namespaces: {}", e.getMessage());
+                config.setNamespaces(new ArrayList<>());
+            }
+        }
+        
+        // Convert JsonNode to Map<String, String> for labels
+        if (this.labels != null) {
+            try {
+                Map<String, String> labelsMap = objectMapper.convertValue(
+                    this.labels,
+                    new TypeReference<Map<String, String>>() {}
+                );
+                config.setLabels(labelsMap);
+            } catch (Exception e) {
+                LOGGER.error("Error converting labels: {}", e.getMessage());
+                config.setLabels(new HashMap<>());
+            }
+        }
+        
+        // Convert JsonNode to List<String> for experiment types
+        if (this.experimentTypes != null) {
+            try {
+                List<String> experimentTypeList = objectMapper.convertValue(
+                    this.experimentTypes,
+                    new TypeReference<List<String>>() {}
+                );
+                config.setExperimentTypes(experimentTypeList);
+            } catch (Exception e) {
+                LOGGER.error("Error converting experiment types: {}", e.getMessage());
+                config.setExperimentTypes(new ArrayList<>());
+            }
+        }
+        
+        config.setMetadataProfile(this.metadataProfile);
+        config.setPerformanceProfile(this.performanceProfile);
+        
+        // Convert JsonNode to TrialSettings
+        if (this.trialSettings != null) {
+            try {
+                BulkConfig.TrialSettings trialSettings = objectMapper.convertValue(
+                    this.trialSettings,
+                    BulkConfig.TrialSettings.class
+                );
+                config.setTrialSettings(trialSettings);
+            } catch (Exception e) {
+                LOGGER.error("Error converting trial settings: {}", e.getMessage());
+            }
+        }
+        
+        // Convert JsonNode to RecommendationSettings
+        if (this.recommendationSettings != null) {
+            try {
+                BulkConfig.RecommendationSettings recSettings = objectMapper.convertValue(
+                    this.recommendationSettings,
+                    BulkConfig.RecommendationSettings.class
+                );
+                config.setRecommendationSettings(recSettings);
+            } catch (Exception e) {
+                LOGGER.error("Error converting recommendation settings: {}", e.getMessage());
+            }
+        }
+        
+        config.setWebhookUrl(this.webhookUrl);
+        config.setEnabled(this.enabled);
+        
+        if (this.createdAt != null) {
+            config.setCreatedAt(this.createdAt.toInstant());
+        }
+        if (this.updatedAt != null) {
+            config.setUpdatedAt(this.updatedAt.toInstant());
+        }
+        
+        return config;
+    }
+
+    /**
+     * Create an entity from a BulkConfig service object
+     */
+    public static KruizeBulkConfigEntry fromBulkConfig(BulkConfig config) {
+        KruizeBulkConfigEntry entry = new KruizeBulkConfigEntry();
+        entry.setConfigName(config.getConfigName());
+        entry.setClusterName(config.getClusterName());
+        
+        // Convert List<String> to JsonNode for datasources
+        if (config.getDatasources() != null) {
+            try {
+                entry.setDatasources(objectMapper.valueToTree(config.getDatasources()));
+            } catch (Exception e) {
+                LOGGER.error("Error converting datasources: {}", e.getMessage());
+            }
+        }
+        
+        // Convert List<String> to JsonNode for namespaces
+        if (config.getNamespaces() != null) {
+            try {
+                entry.setNamespaces(objectMapper.valueToTree(config.getNamespaces()));
+            } catch (Exception e) {
+                LOGGER.error("Error converting namespaces: {}", e.getMessage());
+            }
+        }
+        
+        // Convert Map<String, String> to JsonNode for labels
+        if (config.getLabels() != null) {
+            try {
+                entry.setLabels(objectMapper.valueToTree(config.getLabels()));
+            } catch (Exception e) {
+                LOGGER.error("Error converting labels: {}", e.getMessage());
+            }
+        }
+        
+        // Convert List<String> to JsonNode for experiment types
+        if (config.getExperimentTypes() != null) {
+            try {
+                entry.setExperimentTypes(objectMapper.valueToTree(config.getExperimentTypes()));
+            } catch (Exception e) {
+                LOGGER.error("Error converting experiment types: {}", e.getMessage());
+            }
+        }
+        
+        entry.setMetadataProfile(config.getMetadataProfile());
+        entry.setPerformanceProfile(config.getPerformanceProfile());
+        
+        // Convert TrialSettings to JsonNode
+        if (config.getTrialSettings() != null) {
+            try {
+                entry.setTrialSettings(objectMapper.valueToTree(config.getTrialSettings()));
+            } catch (Exception e) {
+                LOGGER.error("Error converting trial settings: {}", e.getMessage());
+            }
+        }
+        
+        // Convert RecommendationSettings to JsonNode
+        if (config.getRecommendationSettings() != null) {
+            try {
+                entry.setRecommendationSettings(objectMapper.valueToTree(config.getRecommendationSettings()));
+            } catch (Exception e) {
+                LOGGER.error("Error converting recommendation settings: {}", e.getMessage());
+            }
+        }
+        
+        entry.setWebhookUrl(config.getWebhookUrl());
+        entry.setEnabled(config.getEnabled());
+        
+        if (config.getCreatedAt() != null) {
+            entry.setCreatedAt(Timestamp.from(config.getCreatedAt()));
+        }
+        if (config.getUpdatedAt() != null) {
+            entry.setUpdatedAt(Timestamp.from(config.getUpdatedAt()));
+        }
+        
+        return entry;
+    }
 
     @Override
     public String toString() {
