@@ -87,9 +87,10 @@ public class DBConstants {
         public static final String SELECT_FROM_METADATA_PROFILE_BY_NAME = "from KruizeLMMetadataProfileEntry k WHERE k.name = :name";
         public static final String SELECT_FROM_LAYER = "from KruizeLMLayerEntry";
         public static final String SELECT_FROM_LAYER_BY_NAME = "from KruizeLMLayerEntry k WHERE k.layer_name = :layerName";
-        public static final String SELECT_FROM_BULK_PROFILE = "from KruizeBulkProfileEntry";
-        public static final String SELECT_FROM_BULK_PROFILE_BY_NAME = "from KruizeBulkProfileEntry k WHERE k.profileName = :profileName";
-        public static final String LOAD_ALL_ENABLED_BULK_PROFILES = "FROM KruizeBulkProfileEntry WHERE enabled = true ORDER BY profile_name";
+        public static final String SELECT_FROM_BULK_CONFIG = "from KruizeBulkConfigEntry";
+        public static final String SELECT_FROM_BULK_CONFIG_BY_NAME = "from KruizeBulkConfigEntry k WHERE k.configName = :configName";
+        public static final String LOAD_ALL_ENABLED_BULK_CONFIGS = "FROM KruizeBulkConfigEntry WHERE enabled = true ORDER BY config_name";
+        public static final String DELETE_BULK_CONFIG_BY_NAME = "DELETE FROM KruizeBulkConfigEntry k WHERE k.configName = :configName";
         public static final String DELETE_FROM_EXPERIMENTS_BY_EXP_NAME = "DELETE FROM KruizeExperimentEntry k WHERE k.experiment_name = :experimentName";
         public static final String DELETE_FROM_LM_EXPERIMENTS_BY_EXP_NAME = "DELETE FROM KruizeLMExperimentEntry k WHERE k.experiment_name = :experimentName";
         public static final String DELETE_FROM_RESULTS_BY_EXP_NAME = "DELETE FROM KruizeResultsEntry k WHERE k.experiment_name = :experimentName";

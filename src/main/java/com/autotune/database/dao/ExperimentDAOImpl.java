@@ -2054,150 +2054,150 @@ public class ExperimentDAOImpl implements ExperimentDAO {
     }
 
     /**
-     * Adds BulkProfile to database
+     * Adds BulkConfig to database
      *
-     * @param kruizeBulkProfileEntry Bulk Profile Database object to be added
+     * @param kruizeBulkConfigEntry Bulk Config Database object to be added
      * @return validationOutputData contains the status of the DB insert operation
      */
     @Override
-    public ValidationOutputData addBulkProfileToDB(KruizeBulkProfileEntry kruizeBulkProfileEntry) {
+    public ValidationOutputData addBulkConfigToDB(KruizeBulkConfigEntry kruizeBulkConfigEntry) {
         ValidationOutputData validationOutputData = new ValidationOutputData(false, null, null);
         Transaction tx = null;
         try (Session session = KruizeHibernateUtil.getSessionFactory().openSession()) {
             try {
                 tx = session.beginTransaction();
-                session.persist(kruizeBulkProfileEntry);
+                session.persist(kruizeBulkConfigEntry);
                 tx.commit();
                 validationOutputData.setSuccess(true);
             } catch (ConstraintViolationException e) {
-                LOGGER.error("Bulk profile with name {} already exists", kruizeBulkProfileEntry.getProfileName());
+                LOGGER.error("Bulk config with name {} already exists", kruizeBulkConfigEntry.getConfigName());
                 if (tx != null) tx.rollback();
                 validationOutputData.setSuccess(false);
-                validationOutputData.setMessage("Bulk profile with name " + kruizeBulkProfileEntry.getProfileName() + " already exists");
+                validationOutputData.setMessage("Bulk config with name " + kruizeBulkConfigEntry.getConfigName() + " already exists");
                 validationOutputData.setErrorCode(HttpServletResponse.SC_CONFLICT);
             } catch (HibernateException e) {
-                LOGGER.error("Not able to save bulk profile due to {}", e.getMessage());
+                LOGGER.error("Not able to save bulk config due to {}", e.getMessage());
                 if (tx != null) tx.rollback();
                 e.printStackTrace();
                 validationOutputData.setSuccess(false);
                 validationOutputData.setMessage(e.getMessage());
             }
         } catch (Exception e) {
-            LOGGER.error("Not able to save bulk profile due to {}", e.getMessage());
+            LOGGER.error("Not able to save bulk config due to {}", e.getMessage());
             validationOutputData.setMessage(e.getMessage());
         }
         return validationOutputData;
     }
 
     /**
-     * Load a single bulk profile by name
+     * Load a single bulk config by name
      *
-     * @param profileName Name of the bulk profile to load
-     * @return KruizeBulkProfileEntry or null if not found
+     * @param configName Name of the bulk config to load
+     * @return KruizeBulkConfigEntry or null if not found
      */
     @Override
-    public KruizeBulkProfileEntry loadBulkProfileByName(String profileName) throws Exception {
-        KruizeBulkProfileEntry kruizeBulkProfileEntry = null;
+    public KruizeBulkConfigEntry loadBulkConfigByName(String configName) throws Exception {
+        KruizeBulkConfigEntry kruizeBulkConfigEntry = null;
         Transaction tx = null;
         try (Session session = KruizeHibernateUtil.getSessionFactory().openSession()) {
             try {
                 tx = session.beginTransaction();
-                Query<KruizeBulkProfileEntry> query = session.createQuery(
-                        DBConstants.SQLQUERY.SELECT_FROM_BULK_PROFILE_BY_NAME,
-                        KruizeBulkProfileEntry.class);
-                query.setParameter("profileName", profileName);
-                kruizeBulkProfileEntry = query.uniqueResult();
+                Query<KruizeBulkConfigEntry> query = session.createQuery(
+                        DBConstants.SQLQUERY.SELECT_FROM_BULK_CONFIG_BY_NAME,
+                        KruizeBulkConfigEntry.class);
+                query.setParameter("configName", configName);
+                kruizeBulkConfigEntry = query.uniqueResult();
                 tx.commit();
             } catch (NoResultException e) {
-                LOGGER.debug("Bulk profile {} not found", profileName);
+                LOGGER.debug("Bulk config {} not found", configName);
                 if (tx != null) tx.rollback();
             } catch (HibernateException e) {
-                LOGGER.error("Error loading bulk profile: {}", e.getMessage());
+                LOGGER.error("Error loading bulk config: {}", e.getMessage());
                 if (tx != null) tx.rollback();
-                throw new Exception("Error loading bulk profile: " + e.getMessage());
+                throw new Exception("Error loading bulk config: " + e.getMessage());
             }
         } catch (Exception e) {
-            LOGGER.error("Error loading bulk profile: {}", e.getMessage());
-            throw new Exception("Error loading bulk profile: " + e.getMessage());
+            LOGGER.error("Error loading bulk config: {}", e.getMessage());
+            throw new Exception("Error loading bulk config: " + e.getMessage());
         }
-        return kruizeBulkProfileEntry;
+        return kruizeBulkConfigEntry;
     }
 
     /**
-     * Load all bulk profiles
+     * Load all bulk configs
      *
-     * @return List of all bulk profiles
+     * @return List of all bulk configs
      */
     @Override
-    public List<KruizeBulkProfileEntry> loadAllBulkProfiles() throws Exception {
-        List<KruizeBulkProfileEntry> bulkProfiles = new ArrayList<>();
+    public List<KruizeBulkConfigEntry> loadAllBulkConfigs() throws Exception {
+        List<KruizeBulkConfigEntry> bulkConfigs = new ArrayList<>();
         Transaction tx = null;
         try (Session session = KruizeHibernateUtil.getSessionFactory().openSession()) {
             try {
                 tx = session.beginTransaction();
-                Query<KruizeBulkProfileEntry> query = session.createQuery(
-                        DBConstants.SQLQUERY.SELECT_FROM_BULK_PROFILE + " k ORDER BY k.profileName",
-                        KruizeBulkProfileEntry.class);
-                bulkProfiles = query.list();
+                Query<KruizeBulkConfigEntry> query = session.createQuery(
+                        DBConstants.SQLQUERY.SELECT_FROM_BULK_CONFIG + " k ORDER BY k.configName",
+                        KruizeBulkConfigEntry.class);
+                bulkConfigs = query.list();
                 tx.commit();
             } catch (HibernateException e) {
-                LOGGER.error("Error loading bulk profiles: {}", e.getMessage());
+                LOGGER.error("Error loading bulk configs: {}", e.getMessage());
                 if (tx != null) tx.rollback();
-                throw new Exception("Error loading bulk profiles: " + e.getMessage());
+                throw new Exception("Error loading bulk configs: " + e.getMessage());
             }
         } catch (Exception e) {
-            LOGGER.error("Error loading bulk profiles: {}", e.getMessage());
-            throw new Exception("Error loading bulk profiles: " + e.getMessage());
+            LOGGER.error("Error loading bulk configs: {}", e.getMessage());
+            throw new Exception("Error loading bulk configs: " + e.getMessage());
         }
-        return bulkProfiles;
+        return bulkConfigs;
     }
 
     /**
-     * Update an existing bulk profile
+     * Update an existing bulk config
      *
-     * @param kruizeBulkProfileEntry Bulk Profile Database object to be updated
+     * @param kruizeBulkConfigEntry Bulk Config Database object to be updated
      * @return validationOutputData contains the status of the DB update operation
      */
     @Override
-    public ValidationOutputData updateBulkProfileToDB(KruizeBulkProfileEntry kruizeBulkProfileEntry) {
+    public ValidationOutputData updateBulkConfigToDB(KruizeBulkConfigEntry kruizeBulkConfigEntry) {
         ValidationOutputData validationOutputData = new ValidationOutputData(false, null, null);
         Transaction tx = null;
         try (Session session = KruizeHibernateUtil.getSessionFactory().openSession()) {
             try {
                 tx = session.beginTransaction();
-                session.merge(kruizeBulkProfileEntry);
+                session.merge(kruizeBulkConfigEntry);
                 tx.commit();
                 validationOutputData.setSuccess(true);
             } catch (HibernateException e) {
-                LOGGER.error("Not able to update bulk profile due to {}", e.getMessage());
+                LOGGER.error("Not able to update bulk config due to {}", e.getMessage());
                 if (tx != null) tx.rollback();
                 e.printStackTrace();
                 validationOutputData.setSuccess(false);
                 validationOutputData.setMessage(e.getMessage());
             }
         } catch (Exception e) {
-            LOGGER.error("Not able to update bulk profile due to {}", e.getMessage());
+            LOGGER.error("Not able to update bulk config due to {}", e.getMessage());
             validationOutputData.setMessage(e.getMessage());
         }
         return validationOutputData;
     }
 
     /**
-     * Delete a bulk profile by name
+     * Delete a bulk config by name
      *
-     * @param profileName Name of the bulk profile to delete
+     * @param configName Name of the bulk config to delete
      * @return validationOutputData contains the status of the DB delete operation
      */
     @Override
-    public ValidationOutputData deleteBulkProfileByName(String profileName) {
+    public ValidationOutputData deleteBulkConfigByName(String configName) {
         ValidationOutputData validationOutputData = new ValidationOutputData(false, null, null);
         Transaction tx = null;
         try (Session session = KruizeHibernateUtil.getSessionFactory().openSession()) {
             try {
                 tx = session.beginTransaction();
                 Query query = session.createQuery(
-                        DELETE_BULK_PROFILE_BY_NAME, null);
-                query.setParameter("profileName", profileName);
+                        DELETE_BULK_CONFIG_BY_NAME, null);
+                query.setParameter("configName", configName);
                 int result = query.executeUpdate();
                 tx.commit();
 
@@ -2205,49 +2205,49 @@ public class ExperimentDAOImpl implements ExperimentDAO {
                     validationOutputData.setSuccess(true);
                 } else {
                     validationOutputData.setSuccess(false);
-                    validationOutputData.setMessage("Bulk profile not found: " + profileName);
+                    validationOutputData.setMessage("Bulk config not found: " + configName);
                     validationOutputData.setErrorCode(HttpServletResponse.SC_NOT_FOUND);
                 }
             } catch (HibernateException e) {
-                LOGGER.error("Not able to delete bulk profile due to {}", e.getMessage());
+                LOGGER.error("Not able to delete bulk config due to {}", e.getMessage());
                 if (tx != null) tx.rollback();
                 e.printStackTrace();
                 validationOutputData.setSuccess(false);
                 validationOutputData.setMessage(e.getMessage());
             }
         } catch (Exception e) {
-            LOGGER.error("Not able to delete bulk profile due to {}", e.getMessage());
+            LOGGER.error("Not able to delete bulk config due to {}", e.getMessage());
             validationOutputData.setMessage(e.getMessage());
         }
         return validationOutputData;
     }
 
     /**
-     * Load all enabled bulk profiles
+     * Load all enabled bulk configs
      *
-     * @return List of enabled bulk profiles
+     * @return List of enabled bulk configs
      */
     @Override
-    public List<KruizeBulkProfileEntry> loadEnabledBulkProfiles() throws Exception {
-        List<KruizeBulkProfileEntry> bulkProfiles = new ArrayList<>();
+    public List<KruizeBulkConfigEntry> loadEnabledBulkConfigs() throws Exception {
+        List<KruizeBulkConfigEntry> bulkConfigs = new ArrayList<>();
         Transaction tx = null;
         try (Session session = KruizeHibernateUtil.getSessionFactory().openSession()) {
             try {
                 tx = session.beginTransaction();
-                Query<KruizeBulkProfileEntry> query = session.createQuery(
-                        LOAD_ALL_ENABLED_BULK_PROFILES,
-                        KruizeBulkProfileEntry.class);
-                bulkProfiles = query.list();
+                Query<KruizeBulkConfigEntry> query = session.createQuery(
+                        LOAD_ALL_ENABLED_BULK_CONFIGS,
+                        KruizeBulkConfigEntry.class);
+                bulkConfigs = query.list();
                 tx.commit();
             } catch (HibernateException e) {
-                LOGGER.error("Error loading enabled bulk profiles: {}", e.getMessage());
+                LOGGER.error("Error loading enabled bulk configs: {}", e.getMessage());
                 if (tx != null) tx.rollback();
-                throw new Exception("Error loading enabled bulk profiles: " + e.getMessage());
+                throw new Exception("Error loading enabled bulk configs: " + e.getMessage());
             }
         } catch (Exception e) {
-            LOGGER.error("Error loading enabled bulk profiles: {}", e.getMessage());
-            throw new Exception("Error loading enabled bulk profiles: " + e.getMessage());
+            LOGGER.error("Error loading enabled bulk configs: {}", e.getMessage());
+            throw new Exception("Error loading enabled bulk configs: " + e.getMessage());
         }
-        return bulkProfiles;
+        return bulkConfigs;
     }
 }

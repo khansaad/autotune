@@ -175,16 +175,16 @@ public interface ExperimentDAO {
 
     ValidationOutputData updatePerformanceProfileInDB(KruizePerformanceProfileEntry kruizePerformanceProfileEntry);
 
-    // Bulk Profile operations
-    ValidationOutputData addBulkProfileToDB(KruizeBulkProfileEntry kruizeBulkProfileEntry);
+    // Bulk Config operations
+    ValidationOutputData addBulkConfigToDB(KruizeBulkConfigEntry kruizeBulkConfigEntry);
 
-    KruizeBulkProfileEntry loadBulkProfileByName(String profileName) throws Exception;
+    KruizeBulkConfigEntry loadBulkConfigByName(String configName) throws Exception;
 
-    List<KruizeBulkProfileEntry> loadAllBulkProfiles() throws Exception;
+    List<KruizeBulkConfigEntry> loadAllBulkConfigs() throws Exception;
 
-    ValidationOutputData updateBulkProfileToDB(KruizeBulkProfileEntry kruizeBulkProfileEntry);
+    ValidationOutputData updateBulkConfigToDB(KruizeBulkConfigEntry kruizeBulkConfigEntry);
 
-    ValidationOutputData deleteBulkProfileByName(String profileName);
+    ValidationOutputData deleteBulkConfigByName(String configName);
 
-    List<KruizeBulkProfileEntry> loadEnabledBulkProfiles() throws Exception;
+    List<KruizeBulkConfigEntry> loadEnabledBulkConfigs() throws Exception;
 }
