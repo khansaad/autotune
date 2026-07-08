@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2026 Red Hat, IBM Corporation and others.
+ * Copyright (c) 2026 IBM Corporation and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,12 @@
 package com.autotune.database.table.lm;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.sql.Timestamp;
 
@@ -35,8 +32,6 @@ import java.sql.Timestamp;
 @Entity
 @Table(name = "kruize_optimiser_bulk_config")
 public class KruizeBulkConfigEntry {
-    private static final Logger LOGGER = LoggerFactory.getLogger(KruizeBulkConfigEntry.class);
-    private static final ObjectMapper objectMapper = new ObjectMapper();
 
     @Id
     @Column(name = "config_name", columnDefinition = "VARCHAR(255)")
@@ -206,7 +201,7 @@ public class KruizeBulkConfigEntry {
 
     @Override
     public String toString() {
-        return "KruizeBulkProfileEntry{" +
+        return "KruizeBulkConfigEntry{" +
                 "configName='" + configName + '\'' +
                 ", clusterName='" + clusterName + '\'' +
                 ", datasources=" + datasources +
