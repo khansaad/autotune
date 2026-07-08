@@ -233,24 +233,21 @@ MEMORY_REQUEST_OVER_PROVISIONED_MSG = "Workload is over-provisioned for Memory. 
 MEMORY_LIMIT_UNDER_PROVISIONED_MSG = "Workload is under-provisioned for Memory LIMITS. Kruize recommends increasing Memory limit allocation."
 MEMORY_LIMIT_OVER_PROVISIONED_MSG = "Workload is over-provisioned for Memory LIMITS. Kruize recommends reducing Memory limit allocation to optimize costs."
 
-# All provisioning notification codes grouped for convenience
-PROVISIONING_CODES = {
+# All provisioning-state notification codes (optimised + under + over) grouped for use in
+# validation helpers and tests.
+ALL_PROVISIONING_CODES = {
+    CPU_REQUEST_OPTIMISED_CODE,
     CPU_REQUEST_UNDER_PROVISIONED_CODE,
     CPU_REQUEST_OVER_PROVISIONED_CODE,
+    CPU_LIMIT_OPTIMISED_CODE,
     CPU_LIMIT_UNDER_PROVISIONED_CODE,
     CPU_LIMIT_OVER_PROVISIONED_CODE,
+    MEMORY_REQUEST_OPTIMISED_CODE,
     MEMORY_REQUEST_UNDER_PROVISIONED_CODE,
     MEMORY_REQUEST_OVER_PROVISIONED_CODE,
+    MEMORY_LIMIT_OPTIMISED_CODE,
     MEMORY_LIMIT_UNDER_PROVISIONED_CODE,
     MEMORY_LIMIT_OVER_PROVISIONED_CODE,
-}
-
-# All optimised notification codes grouped for convenience
-OPTIMISED_CODES = {
-    CPU_REQUEST_OPTIMISED_CODE,
-    CPU_LIMIT_OPTIMISED_CODE,
-    MEMORY_REQUEST_OPTIMISED_CODE,
-    MEMORY_LIMIT_OPTIMISED_CODE,
 }
 
 CPU_REQUEST = "cpuRequest"

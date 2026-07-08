@@ -53,7 +53,7 @@ from helpers.utils import (
     CPU_LIMIT_OPTIMISED_CODE,
     MEMORY_REQUEST_OPTIMISED_CODE,
     MEMORY_LIMIT_OPTIMISED_CODE,
-    # Notification codes — under-provisioned (new)
+    # Notification codes — under/over-provisioned
     CPU_REQUEST_UNDER_PROVISIONED_CODE,
     CPU_REQUEST_OVER_PROVISIONED_CODE,
     CPU_LIMIT_UNDER_PROVISIONED_CODE,
@@ -62,7 +62,7 @@ from helpers.utils import (
     MEMORY_REQUEST_OVER_PROVISIONED_CODE,
     MEMORY_LIMIT_UNDER_PROVISIONED_CODE,
     MEMORY_LIMIT_OVER_PROVISIONED_CODE,
-    # Messages — under/over provisioned (new)
+    # Messages — under/over provisioned
     CPU_REQUEST_UNDER_PROVISIONED_MSG,
     CPU_REQUEST_OVER_PROVISIONED_MSG,
     CPU_LIMIT_UNDER_PROVISIONED_MSG,
@@ -71,6 +71,8 @@ from helpers.utils import (
     MEMORY_REQUEST_OVER_PROVISIONED_MSG,
     MEMORY_LIMIT_UNDER_PROVISIONED_MSG,
     MEMORY_LIMIT_OVER_PROVISIONED_MSG,
+    # All provisioning-state codes (optimised + under + over) — used for presence checks
+    ALL_PROVISIONING_CODES,
     # Helper validators
     validate_provisioning_notifications,
     check_provisioning_notification_exclusive,
@@ -88,24 +90,6 @@ from helpers.list_metadata_profiles_schema import list_metadata_profiles_schema
 
 metric_profile_dir = get_metric_profile_dir()
 metadata_profile_dir = get_metadata_profile_dir()
-
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
-ALL_PROVISIONING_CODES = {
-    CPU_REQUEST_OPTIMISED_CODE,
-    CPU_REQUEST_UNDER_PROVISIONED_CODE,
-    CPU_REQUEST_OVER_PROVISIONED_CODE,
-    CPU_LIMIT_OPTIMISED_CODE,
-    CPU_LIMIT_UNDER_PROVISIONED_CODE,
-    CPU_LIMIT_OVER_PROVISIONED_CODE,
-    MEMORY_REQUEST_OPTIMISED_CODE,
-    MEMORY_REQUEST_UNDER_PROVISIONED_CODE,
-    MEMORY_REQUEST_OVER_PROVISIONED_CODE,
-    MEMORY_LIMIT_OPTIMISED_CODE,
-    MEMORY_LIMIT_UNDER_PROVISIONED_CODE,
-    MEMORY_LIMIT_OVER_PROVISIONED_CODE,
-}
 
 _CODE_TO_MSG = {
     CPU_REQUEST_UNDER_PROVISIONED_CODE: CPU_REQUEST_UNDER_PROVISIONED_MSG,
@@ -439,6 +423,10 @@ def test_provisioning_notifications_present_in_engine(
     assert engine_notif_blocks, "No engine notification blocks found — recommendations may not have been generated"
 
     for engine_notifications in engine_notif_blocks:
+        assert any(code in engine_notifications for code in ALL_PROVISIONING_CODES), (
+            "Engine notification block contains no provisioning-state codes "
+            f"(optimised/under/over-provisioned). Block keys: {list(engine_notifications.keys())}"
+        )
         validate_provisioning_notifications(engine_notifications)
 
     # Cleanup
