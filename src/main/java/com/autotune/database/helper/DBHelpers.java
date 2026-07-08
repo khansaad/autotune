@@ -79,6 +79,7 @@ import static com.autotune.utils.KruizeConstants.KRUIZE_BULK_API.JOB_ID;
  */
 public class DBHelpers {
     private static final Logger LOGGER = LoggerFactory.getLogger(DBHelpers.class);
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
 
     private DBHelpers() {
@@ -1247,8 +1248,8 @@ public class DBHelpers {
                     }
                     // Convert List<String> clusters to JsonNode and store as JSONB
                     List<String> clusterList = dataSourceInfo.getClusters();
-                    if (!clusterList.isEmpty()) {
-                        kruizeDataSource.setClusters(new ObjectMapper().valueToTree(clusterList));
+                    if (clusterList != null && !clusterList.isEmpty()) {
+                        kruizeDataSource.setClusters(OBJECT_MAPPER.valueToTree(clusterList));
                     }
                 } catch (Exception e) {
                     kruizeDataSource = null;
