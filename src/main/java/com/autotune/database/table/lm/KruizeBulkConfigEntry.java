@@ -357,7 +357,6 @@ public class KruizeBulkConfigEntry {
             try {
                 entry.setLabels(objectMapper.valueToTree(config.getLabels()));
             } catch (Exception e) {
-
                 throw new RuntimeException("Failed to convert labels for config: " + config.getConfigName(), e);
             }
         }
