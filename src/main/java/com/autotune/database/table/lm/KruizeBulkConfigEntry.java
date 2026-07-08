@@ -56,7 +56,7 @@ public class KruizeBulkConfigEntry {
     @Column(name = "experiment_types", columnDefinition = "jsonb", nullable = false)
     private JsonNode experimentTypes;
 
-    @Column(name = "metadata_profile", columnDefinition = "VARCHAR(255)")
+    @Column(name = "metadata_profile", columnDefinition = "VARCHAR(255)", nullable = false)
     private String metadataProfile;
 
     @Column(name = "performance_profile", columnDefinition = "VARCHAR(255)", nullable = false)
@@ -70,7 +70,7 @@ public class KruizeBulkConfigEntry {
     @Column(name = "recommendation_settings", columnDefinition = "jsonb", nullable = false)
     private JsonNode recommendationSettings;
 
-    @Column(name = "webhook_url", columnDefinition = "VARCHAR(500)")
+    @Column(name = "webhook_url", columnDefinition = "VARCHAR(500)", nullable = false)
     private String webhookUrl;
 
     @Column(name = "enabled", nullable = false)
