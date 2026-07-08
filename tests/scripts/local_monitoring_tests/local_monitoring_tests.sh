@@ -71,6 +71,7 @@ function local_monitoring_tests() {
 		APP_NAMESPACE="default"
 		BENCHMARKS=("tfb" "petclinic" "sysbench")
 		LOAD_JOBS=("petclinic-load-generator" "tfb-qrh-load-generator")
+		NS_BENCHMARKS=("ns1" "ns2" "ns3")
 
 		# Clone benchmarks repository if not present
 		if [ ! -d "benchmarks" ]; then
@@ -86,7 +87,7 @@ function local_monitoring_tests() {
 		done
 		echo "Done!"
 
-		# Install benchmarks
+		# Install benchmarks in default namespace
 		echo "Installing benchmarks (${BENCHMARKS[*]})..."
 		for bench in "${BENCHMARKS[@]}"; do
 			echo -n "  - Installing ${bench}... "
@@ -98,6 +99,16 @@ function local_monitoring_tests() {
 			fi
 		done
 		echo "All benchmarks installed!"
+
+		# Create namespaces and install sysbench for namespace recommendation tests
+		echo "Setting up namespaces for namespace recommendation tests (${NS_BENCHMARKS[*]})..."
+		for ns in "${NS_BENCHMARKS[@]}"; do
+			echo -n "  - Creating namespace ${ns} and installing sysbench... "
+			kubectl create namespace ${ns} --dry-run=client -o yaml | kubectl apply -f - >> "${LOG}" 2>&1
+			benchmarks_install ${ns} "sysbench" "sysbench.yaml" >> "${LOG}" 2>&1
+			echo "Done!"
+		done
+		echo "All namespace benchmarks installed!"
 
 	fi
 	# Setup kruize
@@ -178,24 +189,11 @@ function local_monitoring_tests() {
 		LOG="${TEST_DIR}/${test}.log"
 
 		if [ "${test}" == "runtimes" ]; then
-		  APP_NAMESPACE="default"
-		  if [ ! -d "benchmarks" ]; then
-        echo -n "🔄 Pulling required repositories... "
-        clone_repos benchmarks
-      fi
-      bench="tfb"
-      bench2="petclinic"
-		  echo -n "🔄 Installing the required benchmarks..."
-		  # Clean up any existing load job so the new one can start fresh
-			echo "Cleaning up any old load jobs..." >> "${LOG}" 2>&1
-			kubectl delete job petclinic-load-generator -n ${APP_NAMESPACE} --ignore-not-found >> "${LOG}" 2>&1
-			kubectl delete job tfb-qrh-load-generator -n ${APP_NAMESPACE} --ignore-not-found >> "${LOG}" 2>&1
-
-			benchmarks_install ${APP_NAMESPACE} ${bench} "kruize-demos" >> "${LOG}"
-			benchmarks_install ${APP_NAMESPACE} ${bench2} "kruize-demos" >> "${LOG}"
-			echo "✅ Completed!"
-
+			APP_NAMESPACE="default"
 			quarkus_label="com.redhat.component-name=Quarkus"
+			# tfb and petclinic were already installed during the upfront benchmark setup
+			# and have had 30 minutes of data collected. Only apply the Quarkus label
+			# and any cluster-specific monitoring setup needed for runtimes detection.
 			if [[ ${cluster_type} == "minikube" ]] || [[ ${cluster_type} == "kind" ]]; then
 				quarkus_pod_name=$(kubectl get pod | grep tfb-qrh | cut -d " " -f1)
 				kubectl label pod "${quarkus_pod_name}" "${quarkus_label}" >> "${LOG}" 2>&1
