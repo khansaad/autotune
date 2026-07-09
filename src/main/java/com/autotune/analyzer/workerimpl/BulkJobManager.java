@@ -92,6 +92,7 @@ import static com.autotune.utils.KruizeConstants.KRUIZE_BULK_API.NotificationCon
 import static com.autotune.utils.KruizeConstants.KRUIZE_BULK_API.NotificationConstants.EXPERIMENT_FAILED;
 import static com.autotune.utils.KruizeConstants.KRUIZE_BULK_API.NotificationConstants.LIMIT_INFO;
 import static com.autotune.utils.KruizeConstants.KRUIZE_BULK_API.NotificationConstants.METADATA_PROFILE_NOT_FOUND;
+import static com.autotune.utils.KruizeConstants.KRUIZE_BULK_API.NotificationConstants.LABEL_FILTER_NO_MATCH_INFO;
 import static com.autotune.utils.KruizeConstants.KRUIZE_BULK_API.NotificationConstants.NOTHING_INFO;
 import com.autotune.utils.KruizeConstants.KRUIZE_BULK_API.NotificationConstants.WebHookStatus;
 import static com.autotune.utils.KruizeConstants.KRUIZE_BULK_API.START_TIME;
@@ -224,7 +225,11 @@ public class BulkJobManager implements Runnable {
                                 0, measurementDuration, includeResourcesMap, excludeResourcesMap);
                     }
                     if (null == metadataInfo) {
-                        setFinalJobStatus(COMPLETED, String.valueOf(HttpURLConnection.HTTP_OK), NOTHING_INFO, datasource);
+                        boolean labelFilterRequested = !includeResourcesMap.getOrDefault("podLabelFilter", "").isEmpty()
+                                || !includeResourcesMap.getOrDefault("namespaceLabelFilter", "").isEmpty();
+                        BulkJobStatus.Notification noMatchNotification = labelFilterRequested
+                                ? LABEL_FILTER_NO_MATCH_INFO : NOTHING_INFO;
+                        setFinalJobStatus(COMPLETED, String.valueOf(HttpURLConnection.HTTP_OK), noMatchNotification, datasource);
                     } else {
                         jobData.setMetadata(metadataInfo);
                         Map<String, CreateExperimentAPIObject> createExperimentAPIObjectMap = getExperimentMap(labelString, jobData, metadataInfo, datasource); //Todo Store this map in buffer and use it if BulkAPI pods restarts and support experiment_type

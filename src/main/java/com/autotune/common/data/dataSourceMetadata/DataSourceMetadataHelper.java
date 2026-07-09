@@ -465,19 +465,29 @@ public class DataSourceMetadataHelper {
         }
     }
 
-    public void filterMetadataInfoObject(String dataSourceName, DataSourceMetadataInfo dataSourceMetadataInfo,
+    /**
+     * Filters the {@link DataSourceMetadataInfo} object to retain only the namespaces/workloads
+     * that matched the requested label filters.
+     *
+     * @return {@code true}  when no label filter was requested (nothing to filter), or when
+     *         the filter queries returned at least one match and filtering was applied.
+     *         {@code false} when a label filter <em>was</em> requested but <strong>no</strong>
+     *         resources matched — the caller should treat this as "zero results" and stop
+     *         processing instead of falling back to all workloads.
+     */
+    public boolean filterMetadataInfoObject(String dataSourceName, DataSourceMetadataInfo dataSourceMetadataInfo,
                                          HashMap<String, DataSourceNamespace> matchedNamespaces,
                                          HashMap<String, HashMap<String, DataSourceWorkload>> matchedWorkloads) {
         try {
             if (dataSourceMetadataInfo == null || dataSourceMetadataInfo.getDataSourceObject(dataSourceName) == null) {
-                return;
+                return true;
             }
 
             DataSourceCluster cluster = dataSourceMetadataInfo.getDataSourceObject(dataSourceName)
                     .getDataSourceClusterObject(KruizeConstants.DataSourceConstants.DataSourceMetadataInfoConstants.CLUSTER_NAME);
 
             if (cluster == null || cluster.getNamespaces() == null) {
-                return;
+                return true;
             }
 
             // null = no filter requested, empty HashMap = filter requested but no matches
@@ -487,7 +497,7 @@ public class DataSourceMetadataHelper {
             // If no filters were requested at all, don't filter anything
             if (!namespaceFilterRequested && !workloadFilterRequested) {
                 LOGGER.debug("No label filters requested, keeping all workloads");
-                return;
+                return true;
             }
 
             // Check if we have any matches
@@ -495,27 +505,28 @@ public class DataSourceMetadataHelper {
             boolean hasWorkloadMatches = workloadFilterRequested && !matchedWorkloads.isEmpty();
             
             // OR logic: Keep results if EITHER filter has matches
-            // If ALL requested filters returned no matches, skip filtering (keep all resources)
-            // This prevents empty metadata when label filter queries fail or return no results
+            // If ALL requested filters returned no matches, return false so the caller can
+            // propagate "no results" back to the API instead of silently keeping all workloads.
             if (namespaceFilterRequested && workloadFilterRequested) {
                 // Both filters requested - if BOTH have no matches, skip filtering
                 if (!hasNamespaceMatches && !hasWorkloadMatches) {
-                    LOGGER.warn("Both label filters requested but no resources matched - skipping label filtering (keeping all workloads). " +
-                               "This may indicate label filter queries are not finding matches. Check that kube_namespace_labels and kube_pod_labels metrics exist.");
-                    return;
+                    LOGGER.warn("Both label filters requested but no resources matched. " +
+                               "Returning no results. Check that kube_namespace_labels and kube_pod_labels metrics exist " +
+                               "and that the requested labels are present on cluster resources.");
+                    return false;
                 }
                 // If at least one has matches, continue with filtering below
                 LOGGER.info("Label filters: namespace matches={}, workload matches={}", hasNamespaceMatches, hasWorkloadMatches);
             } else if (namespaceFilterRequested && !hasNamespaceMatches) {
                 // Only namespace filter requested, no matches - skip filtering
-                LOGGER.warn("Namespace label filter requested but no resources matched - skipping label filtering (keeping all workloads). " +
-                           "Check that kube_namespace_labels metric exists and has the requested labels.");
-                return;
+                LOGGER.warn("Namespace label filter requested but no resources matched. " +
+                           "Returning no results. Check that kube_namespace_labels metric exists and has the requested labels.");
+                return false;
             } else if (workloadFilterRequested && !hasWorkloadMatches) {
                 // Only workload filter requested, no matches - skip filtering
-                LOGGER.warn("Workload label filter requested but no resources matched - skipping label filtering (keeping all workloads). " +
-                           "Check that kube_pod_labels metric exists and has the requested labels.");
-                return;
+                LOGGER.warn("Workload label filter requested but no resources matched. " +
+                           "Returning no results. Check that kube_pod_labels metric exists and has the requested labels.");
+                return false;
             }
 
             cluster.getNamespaces().entrySet().removeIf(namespaceEntry -> {
@@ -552,9 +563,11 @@ public class DataSourceMetadataHelper {
                 // No matches from either filter for this namespace - remove it
                 return true;
             });
+            return true;
         } catch (Exception e) {
             LOGGER.error("Error while filtering datasource metadata info {}", e.getMessage());
         }
+        return true;
     }
 
     public String getQueryFromProfile(MetadataProfile metadataProfile, String metricName) {

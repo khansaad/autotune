@@ -953,6 +953,7 @@ public class KruizeConstants {
         public static final String FAILED = "FAILED";
         public static final String LIMIT_MESSAGE = "The number of experiments exceeds the defined limit.";
         public static final String NOTHING = "Nothing to do.";
+        public static final String LABEL_FILTER_NO_MATCH = "No workloads matched the requested label filter. Nothing to do.";
         public static final String START_TIME = "start_time";
         public static final String END_TIME = "end_time";
         public static final String STEPS = "steps";
@@ -1009,6 +1010,11 @@ public class KruizeConstants {
             public static final BulkJobStatus.Notification NOTHING_INFO = new BulkJobStatus.Notification(
                     BulkJobStatus.NotificationType.INFO,
                     NOTHING,
+                    400
+            );
+            public static final BulkJobStatus.Notification LABEL_FILTER_NO_MATCH_INFO = new BulkJobStatus.Notification(
+                    BulkJobStatus.NotificationType.INFO,
+                    LABEL_FILTER_NO_MATCH,
                     400
             );
             public static final BulkJobStatus.Notification FETCH_METRIC_FAILURE = new BulkJobStatus.Notification(

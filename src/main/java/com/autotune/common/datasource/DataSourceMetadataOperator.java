@@ -376,7 +376,11 @@ public class DataSourceMetadataOperator {
                                java.util.Map.Entry::getKey,
                                e -> e.getValue().keySet()
                            )));
-            dataSourceDetailsHelper.filterMetadataInfoObject(dataSourceName, dataSourceMetadataInfo, matchedNamespaces, matchedWorkloads);
+            boolean filterApplied = dataSourceDetailsHelper.filterMetadataInfoObject(dataSourceName, dataSourceMetadataInfo, matchedNamespaces, matchedWorkloads);
+            if (!filterApplied) {
+                LOGGER.warn("Label filter was requested but no matching resources were found. Returning null metadata.");
+                return null;
+            }
 
             return getDataSourceMetadataInfo(dataSourceInfo);
         }
