@@ -100,6 +100,28 @@ function local_monitoring_tests() {
 		done
 		echo "All benchmarks installed!"
 
+		# Wait for all benchmark pods to be Ready before starting data collection.
+		echo "Waiting for benchmark pods to be Ready..."
+		kubectl wait --for=condition=Ready pod --all -n ${APP_NAMESPACE} --timeout=300s >> "${LOG}" 2>&1 \
+			&& echo "All benchmark pods are Ready!" \
+			|| echo "WARNING: Some pods in ${APP_NAMESPACE} not ready within 300s, continuing anyway"
+
+		# Apply the Quarkus label and enable monitoring for the runtimes tests.
+		# Must be done here so Prometheus scrapes JVM metrics during the 30-minute wait.
+		quarkus_label="com.redhat.component-name=Quarkus"
+		quarkus_pod_name=$(kubectl get pod -n ${APP_NAMESPACE} -l app=tfb-qrh-sample --no-headers -o custom-columns=":metadata.name" | head -1)
+		if [ -n "${quarkus_pod_name}" ]; then
+			kubectl label pod "${quarkus_pod_name}" "${quarkus_label}" -n ${APP_NAMESPACE} --overwrite >> "${LOG}" 2>&1
+			echo "Labelled pod ${quarkus_pod_name} with Quarkus label."
+		else
+			echo "WARNING: tfb-qrh pod not found, skipping Quarkus label"
+		fi
+		if [[ ${cluster_type} == "minikube" ]] || [[ ${cluster_type} == "kind" ]]; then
+			echo -n "Enabling kube state metrics labels... "
+			bash "${KRUIZE_REPO}/scripts/enable_kube_state_metrics_labels.sh" >> "${LOG}" 2>&1
+			echo "Done!"
+		fi
+
 		# Create namespaces and install sysbench for namespace recommendation tests
 		echo "Setting up namespaces for namespace recommendation tests (${NS_BENCHMARKS[*]})..."
 		for ns in "${NS_BENCHMARKS[@]}"; do
@@ -189,20 +211,14 @@ function local_monitoring_tests() {
 		LOG="${TEST_DIR}/${test}.log"
 
 		if [ "${test}" == "runtimes" ]; then
-			APP_NAMESPACE="default"
-			quarkus_label="com.redhat.component-name=Quarkus"
-			# tfb and petclinic were already installed during the upfront benchmark setup
-			# and have had 30 minutes of data collected. Only apply the Quarkus label
-			# and any cluster-specific monitoring setup needed for runtimes detection.
-			if [[ ${cluster_type} == "minikube" ]] || [[ ${cluster_type} == "kind" ]]; then
-				quarkus_pod_name=$(kubectl get pod | grep tfb-qrh | cut -d " " -f1)
-				kubectl label pod "${quarkus_pod_name}" "${quarkus_label}" >> "${LOG}" 2>&1
-				echo -n "🔄 Enabling kube state metrics labels..."
-				bash "${KRUIZE_REPO}/scripts/enable_kube_state_metrics_labels.sh" >> "${LOG}" 2>&1
-				echo "✅ Complete!"
-			else
-				quarkus_pod_name=$(oc get pod | grep tfb-qrh | cut -d " " -f1)
-				oc label pod "${quarkus_pod_name}" "${quarkus_label}" >> "${LOG}" 2>&1
+			# Label/monitoring setup was already applied in the upfront benchmark block.
+			# For OpenShift, user workload monitoring must still be enabled here since
+			# it depends on cluster-level configuration not available during benchmark setup.
+			if [[ ${cluster_type} != "minikube" ]] && [[ ${cluster_type} != "kind" ]]; then
+				APP_NAMESPACE="default"
+				quarkus_label="com.redhat.component-name=Quarkus"
+				quarkus_pod_name=$(oc get pod -n ${APP_NAMESPACE} | grep tfb-qrh | cut -d " " -f1)
+				oc label pod "${quarkus_pod_name}" "${quarkus_label}" -n ${APP_NAMESPACE} >> "${LOG}" 2>&1
 				echo -n "🔄 Enabling user workload monitoring..."
 				bash "${KRUIZE_REPO}/scripts/enable_user_workload_monitoring_openshift.sh" >> "${LOG}" 2>&1
 				echo "✅ Complete!"
