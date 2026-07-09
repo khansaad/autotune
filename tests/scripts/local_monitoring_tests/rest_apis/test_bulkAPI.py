@@ -581,17 +581,23 @@ def test_bulk_api_cluster_name_validation(cluster_type, cluster_name, expected_s
 
 
 @pytest.mark.test_bulk_api_ros
-@pytest.mark.parametrize("model_settings, expected_status, expected_error", [
-    ({"models": ["performance"]}, SUCCESS_200_STATUS_CODE, None),  # Valid single model
-    ({"models": ["cost"]}, SUCCESS_200_STATUS_CODE, None),  # Valid cost model
-    ({"models": ["performance", "cost"]}, SUCCESS_200_STATUS_CODE, None),  # Valid multiple models
-    ({"models": ["Performance", "COST"]}, SUCCESS_200_STATUS_CODE, None),  # Valid case-insensitive
-    ({"models": []}, ERROR_STATUS_CODE, "model_settings.models cannot be null or empty"),  # Empty list
-    ({"models": ["invalid"]}, ERROR_STATUS_CODE, "Invalid model name"),  # Invalid model
-    ({"models": ["performance", "invalid"]}, ERROR_STATUS_CODE, "Invalid model name"),  # Mixed valid/invalid
-    ({}, ERROR_STATUS_CODE, "model_settings.models cannot be null or empty"),  # Missing models field
+@pytest.mark.parametrize("model_settings, expected_status, expected_error, expected_full_error", [
+    ({"models": ["performance"]}, SUCCESS_200_STATUS_CODE, None, None),  # Valid single model
+    ({"models": ["cost"]}, SUCCESS_200_STATUS_CODE, None, None),  # Valid cost model
+    ({"models": ["performance", "cost"]}, SUCCESS_200_STATUS_CODE, None, None),  # Valid multiple models
+    ({"models": ["Performance", "COST"]}, SUCCESS_200_STATUS_CODE, None, None),  # Valid case-insensitive
+    ({"models": []}, ERROR_STATUS_CODE, "model_settings.models cannot be null or empty", None),  # Empty list
+    # Null and blank model name entries — must trigger the null/empty-name branch
+    ({"models": [None]}, ERROR_STATUS_CODE, "model_settings.models contains null or empty model name", None),
+    ({"models": [" "]}, ERROR_STATUS_CODE, "model_settings.models contains null or empty model name", None),
+    # Invalid model — assert on full message to lock in the error contract
+    ({"models": ["invalid"]}, ERROR_STATUS_CODE, "Invalid model name",
+     "Invalid model name: invalid. Valid models are: [performance, cost]"),
+    ({"models": ["performance", "invalid"]}, ERROR_STATUS_CODE, "Invalid model name", None),  # Mixed valid/invalid
+    ({}, ERROR_STATUS_CODE, "model_settings.models cannot be null or empty", None),  # Missing models field
 ])
-def test_bulk_api_model_settings_validation(cluster_type, model_settings, expected_status, expected_error, caplog):
+def test_bulk_api_model_settings_validation(cluster_type, model_settings, expected_status, expected_error,
+                                            expected_full_error, caplog):
     """
     Validates model_settings field validation in Bulk API.
     Tests valid models, invalid models, and edge cases.
@@ -612,7 +618,10 @@ def test_bulk_api_model_settings_validation(cluster_type, model_settings, expect
         assert response.status_code == expected_status, \
             f"Expected status {expected_status} but got {response.status_code}. Response: {response.json()}"
 
-        if expected_error:
+        if expected_full_error:
+            assert expected_full_error in response.json()["message"], \
+                f"Expected full error message to contain '{expected_full_error}' but got: {response.json()['message']}"
+        elif expected_error:
             assert expected_error in response.json()["message"], \
                 f"Expected error message to contain '{expected_error}' but got: {response.json()['message']}"
         else:
@@ -621,22 +630,31 @@ def test_bulk_api_model_settings_validation(cluster_type, model_settings, expect
 
 
 @pytest.mark.test_bulk_api_ros
-@pytest.mark.parametrize("term_settings, expected_status, expected_error", [
-    ({"terms": ["short"]}, SUCCESS_200_STATUS_CODE, None),  # Valid single term
-    ({"terms": ["medium"]}, SUCCESS_200_STATUS_CODE, None),  # Valid medium term
-    ({"terms": ["long"]}, SUCCESS_200_STATUS_CODE, None),  # Valid long term
-    ({"terms": ["short", "long"]}, SUCCESS_200_STATUS_CODE, None),  # Valid multiple terms
-    ({"terms": ["Short", "LONG"]}, SUCCESS_200_STATUS_CODE, None),  # Valid case-insensitive
-    ({"terms": ["short", "medium", "long"]}, SUCCESS_200_STATUS_CODE, None),  # All terms
-    ({"terms": []}, ERROR_STATUS_CODE, "term_settings.terms cannot be null or empty"),  # Empty list
-    ({"terms": ["invalid"]}, ERROR_STATUS_CODE, "Invalid term name"),  # Invalid term
-    ({"terms": ["short", "invalid"]}, ERROR_STATUS_CODE, "Invalid term name"),  # Mixed valid/invalid
-    ({}, ERROR_STATUS_CODE, "term_settings.terms cannot be null or empty"),  # Missing terms field
+@pytest.mark.parametrize("term_settings, expected_status, expected_error, expected_full_error", [
+    ({"terms": ["short"]}, SUCCESS_200_STATUS_CODE, None, None),  # Valid single term
+    ({"terms": ["medium"]}, SUCCESS_200_STATUS_CODE, None, None),  # Valid medium term
+    ({"terms": ["long"]}, SUCCESS_200_STATUS_CODE, None, None),  # Valid long term
+    ({"terms": ["short", "long"]}, SUCCESS_200_STATUS_CODE, None, None),  # Valid multiple terms
+    ({"terms": ["Short", "LONG"]}, SUCCESS_200_STATUS_CODE, None, None),  # Valid case-insensitive
+    ({"terms": ["short", "medium", "long"]}, SUCCESS_200_STATUS_CODE, None, None),  # All terms
+    ({"terms": []}, ERROR_STATUS_CODE, "term_settings.terms cannot be null or empty", None),  # Empty list
+    # Null and blank term entries — must trigger the null/empty-name branch
+    ({"terms": [None]}, ERROR_STATUS_CODE, "term_settings.terms contains null or empty term name", None),
+    ({"terms": ["   "]}, ERROR_STATUS_CODE, "term_settings.terms contains null or empty term name", None),
+    # Invalid term — assert on full message to lock in the error contract
+    ({"terms": ["invalid"]}, ERROR_STATUS_CODE, "Invalid term name",
+     "Invalid term name: invalid. Valid terms are: [short, medium, long]"),
+    ({"terms": ["short", "invalid"]}, ERROR_STATUS_CODE, "Invalid term name", None),  # Mixed valid/invalid
+    ({}, ERROR_STATUS_CODE, "term_settings.terms cannot be null or empty", None),  # Missing terms field
 ])
-def test_bulk_api_term_settings_validation(cluster_type, term_settings, expected_status, expected_error, caplog):
+def test_bulk_api_term_settings_validation(cluster_type, term_settings, expected_status, expected_error,
+                                           expected_full_error, caplog):
     """
     Validates term_settings field validation in Bulk API.
     Tests valid terms, invalid terms, and edge cases.
+
+    expected_full_error: when set, the full response message must contain this string verbatim, which
+    locks in the complete error contract (including the valid-values list) against regressions.
     """
     form_kruize_url(cluster_type)
 
@@ -654,7 +672,10 @@ def test_bulk_api_term_settings_validation(cluster_type, term_settings, expected
         assert response.status_code == expected_status, \
             f"Expected status {expected_status} but got {response.status_code}. Response: {response.json()}"
 
-        if expected_error:
+        if expected_full_error:
+            assert expected_full_error in response.json()["message"], \
+                f"Expected full error message to contain '{expected_full_error}' but got: {response.json()['message']}"
+        elif expected_error:
             assert expected_error in response.json()["message"], \
                 f"Expected error message to contain '{expected_error}' but got: {response.json()['message']}"
         else:
