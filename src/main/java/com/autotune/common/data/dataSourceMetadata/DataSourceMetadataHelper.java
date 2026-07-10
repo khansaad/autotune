@@ -534,34 +534,36 @@ public class DataSourceMetadataHelper {
                 DataSourceNamespace namespace = namespaceEntry.getValue();
 
                 boolean namespaceMatched = hasNamespaceMatches && matchedNamespaces.containsKey(namespaceName);
-                HashMap<String, DataSourceWorkload> namespaceMatchedWorkloads =
-                        hasWorkloadMatches ? matchedWorkloads.get(namespaceName) : null;
 
-                // If workload filter is active, always filter workloads regardless of namespace match
-                if (hasWorkloadMatches) {
-                    if (namespace.getWorkloads() != null) {
-                        if (namespaceMatchedWorkloads != null && !namespaceMatchedWorkloads.isEmpty()) {
-                            // Filter to keep only matched workloads
-                            namespace.getWorkloads().entrySet().removeIf(workloadEntry ->
-                                    !namespaceMatchedWorkloads.containsKey(workloadEntry.getKey()));
-                        } else {
-                            // No workload matches in this namespace - remove all workloads
-                            namespace.getWorkloads().clear();
+                // Workload filter was requested (regardless of whether it produced matches).
+                // hasWorkloadMatches = true  → filter matched some workloads, keep only those.
+                // workloadFilterRequested && !hasWorkloadMatches → filter matched nothing; no
+                //   workloads should be kept in any namespace (return false signals "remove namespace").
+                if (workloadFilterRequested) {
+                    if (hasWorkloadMatches) {
+                        HashMap<String, DataSourceWorkload> namespaceMatchedWorkloads = matchedWorkloads.get(namespaceName);
+                        if (namespace.getWorkloads() != null) {
+                            if (namespaceMatchedWorkloads != null && !namespaceMatchedWorkloads.isEmpty()) {
+                                // Keep only matched workloads in this namespace
+                                namespace.getWorkloads().entrySet().removeIf(workloadEntry ->
+                                        !namespaceMatchedWorkloads.containsKey(workloadEntry.getKey()));
+                            } else {
+                                // No workload matches in this namespace - remove all workloads
+                                namespace.getWorkloads().clear();
+                            }
                         }
+                        // Keep namespace if it still has workloads, or if it matched the namespace filter
+                        boolean hasWorkloadsLeft = namespace.getWorkloads() != null && !namespace.getWorkloads().isEmpty();
+                        return !hasWorkloadsLeft && !namespaceMatched;
+                    } else {
+                        // Workload filter was requested but produced zero results globally —
+                        // nothing to process; remove this namespace entirely.
+                        return true;
                     }
-                    // Keep namespace only if it has workloads after filtering OR if it matched namespace filter
-                    boolean hasWorkloadsLeft = namespace.getWorkloads() != null && !namespace.getWorkloads().isEmpty();
-                    return !hasWorkloadsLeft && !namespaceMatched;
                 }
 
-                // No workload filter - use namespace filter result
-                // If namespace matched by namespace filter, keep it
-                if (namespaceMatched) {
-                    return false;
-                }
-
-                // No matches from either filter for this namespace - remove it
-                return true;
+                // No workload filter requested — use namespace filter result alone
+                return !namespaceMatched;
             });
             return true;
         } catch (Exception e) {

@@ -368,15 +368,32 @@ public class DataSourceMetadataOperator {
                 }
             }
             
-            // Apply the label filter results to remove non-matching resources
-            LOGGER.info("Calling filterMetadataInfoObject with matchedNamespaces: {}, matchedWorkloads: {}",
-                       matchedNamespaces.keySet(),
-                       matchedWorkloads.entrySet().stream()
-                           .collect(java.util.stream.Collectors.toMap(
-                               java.util.Map.Entry::getKey,
-                               e -> e.getValue().keySet()
-                           )));
-            boolean filterApplied = dataSourceDetailsHelper.filterMetadataInfoObject(dataSourceName, dataSourceMetadataInfo, matchedNamespaces, matchedWorkloads);
+            // Apply the label filter results to remove non-matching resources.
+            //
+            // filterMetadataInfoObject treats null as "this dimension had no filter requested"
+            // (keep everything) vs a non-null HashMap as "a filter was requested" (empty = nothing
+            // matched → return false; non-empty = prune to those matches).
+            //
+            // we must explicitly pass null for any dimension that had no label
+            // filter in includeResources — otherwise an empty map is misread as "filter requested,
+            // nothing matched" and all workloads are dropped even without any label filtering.
+            boolean namespaceLabelRequested = !includeResources.getOrDefault("namespaceLabelFilter", "").isEmpty();
+            boolean podLabelRequested       = !includeResources.getOrDefault("podLabelFilter", "").isEmpty();
+
+            HashMap<String, DataSourceNamespace>                       nsArg       = namespaceLabelRequested ? matchedNamespaces : null;
+            HashMap<String, HashMap<String, DataSourceWorkload>> workloadArg = podLabelRequested       ? matchedWorkloads  : null;
+
+            LOGGER.info("Calling filterMetadataInfoObject — namespaceLabelRequested={}, podLabelRequested={}, matchedNamespaces={}, matchedWorkloads={}",
+                       namespaceLabelRequested, podLabelRequested,
+                       nsArg != null ? nsArg.keySet() : "N/A (no filter)",
+                       workloadArg != null
+                           ? workloadArg.entrySet().stream()
+                               .collect(java.util.stream.Collectors.toMap(
+                                   java.util.Map.Entry::getKey,
+                                   e -> e.getValue().keySet()))
+                           : "N/A (no filter)");
+
+            boolean filterApplied = dataSourceDetailsHelper.filterMetadataInfoObject(dataSourceName, dataSourceMetadataInfo, nsArg, workloadArg);
             if (!filterApplied) {
                 LOGGER.warn("Label filter was requested but no matching resources were found. Returning null metadata.");
                 return null;
