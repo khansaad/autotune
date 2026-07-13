@@ -31,22 +31,22 @@ import static org.junit.jupiter.api.Assertions.*;
  * Covers three scenarios:
  *
  * 1. CREDENTIALS ABSENT (simulates test/dev cluster — why the bug was hidden)
- *    When credentials are null or empty, the method short-circuits at the guard
- *    on line 76 of CloudWatchAppender.java.  The AWS SDK is never touched, so
- *    neither jdk.net nor Apache HC5 are loaded.  No exception, no appender.
+ *    When credentials are null or empty, the method short-circuits at the
+ *    credential guard.  The AWS SDK is never touched, so neither jdk.net nor
+ *    Apache HC5 are loaded.  No exception, no appender registered.
  *
- * 2. NEGATIVE — reproduces the production crash (simulates the broken jlink JRE)
- *    Directly attempts to load {@code jdk.net.Sockets} via Class.forName() on a
- *    ClassLoader that has the jdk.net module forcibly hidden, reproducing the
- *    exact {@code NoClassDefFoundError: jdk/net/Sockets} seen in the pod logs.
- *    This is the automated proof of the failure mode WITHOUT the Dockerfile fix.
+ * 2. NEGATIVE — documents the production crash condition
+ *    Asserts that the {@code jdk.net} module is present in the running JRE.
+ *    When {@code jdk.net} is absent (e.g. a stripped jlink JRE that omits the
+ *    module), Apache HttpClient 5 — pulled in by {@code awssdk:apache5-client}
+ *    — fails at startup with {@code NoClassDefFoundError: jdk/net/Sockets}.
+ *    This test fails with a descriptive message when run in such a JRE,
+ *    documenting the exact condition that caused the production crash.
  *
- * 3. POSITIVE — verifies the fix (jdk.net present in the running JRE)
- *    Asserts that {@code jdk.net.Sockets} IS loadable in the current JRE and
- *    that {@code configureLoggerForCloudWatchLog()} completes without any
+ * 3. POSITIVE — verifies the runtime is correctly configured
+ *    Asserts that {@code jdk.net.Sockets} is loadable and that
+ *    {@code configureLoggerForCloudWatchLog()} completes without any
  *    class-loading error when credentials are present.
- *    This test passes only when {@code ,jdk.net} is included in the
- *    {@code jlink --add-modules} list in Dockerfile.autotune.
  */
 class CloudWatchAppenderTest {
 
@@ -150,79 +150,66 @@ class CloudWatchAppenderTest {
     //        at Autotune.main
     //      Caused by: java.lang.ClassNotFoundException: jdk.net.Sockets
     //
-    //    The crash happens because the jlink command in Dockerfile.autotune
-    //    did NOT include ,jdk.net in --add-modules, so the stripped JRE
-    //    shipped inside the container image was missing jdk.net.Sockets.
+    //    Root cause: the jlink-built JRE shipped in the container image did not
+    //    include the jdk.net module, so jdk.net.Sockets was unavailable when
+    //    Apache HttpClient 5 tried to load it in a static initializer.
     //
     //    Note: it is not possible to reproduce the NoClassDefFoundError
     //    in-process on a full JDK — JPMS resolves named-module classes
-    //    (jdk.net.*) directly from the module layer, bypassing the classloader
-    //    hierarchy, so a custom excluding ClassLoader has no effect.
-    //    The real failure only occurs inside the stripped jlink JRE built
-    //    without ,jdk.net.  The negative test below therefore asserts the
-    //    *precondition* of the crash: the jdk.net module is absent.
-    //    Run this test inside the container built WITHOUT the Dockerfile fix
-    //    to see it fail.
+    //    directly from the module layer, bypassing the classloader hierarchy,
+    //    so a custom excluding ClassLoader has no effect.  The test below
+    //    therefore asserts the precondition of the crash: jdk.net must be
+    //    present.  Run it inside a jlink JRE that omits jdk.net to see it fail.
     // =========================================================================
 
     @Test
-    @DisplayName("NEGATIVE: jdk.net module absent → jdk.net.Sockets not loadable")
-    void jdkNetSocketsNotLoadableWhenModuleAbsent() {
+    @DisplayName("NEGATIVE: jdk.net module must be present — absence causes NoClassDefFoundError: jdk/net/Sockets at startup")
+    void jdkNetModuleMustBePresentToPreventStartupCrash() {
         /*
+         * Apache HttpClient 5 (awssdk:apache5-client >= 2.46.x) references
+         * jdk.net.Sockets in a static initializer.  If the jdk.net module is
+         * absent from the JRE, the JVM throws:
+         *   NoClassDefFoundError: jdk/net/Sockets
+         *   Caused by: ClassNotFoundException: jdk.net.Sockets
+         * crashing the process before it can serve any requests.
          *
-         * This test asserts the precondition :
-         *   the jdk.net module must NOT be absent from the JRE.
-         *
-         * On a developer machine (full JDK) jdk.net is always present,
-         * so this test passes unconditionally in local development.
-         *
-         * Inside the container image built from Dockerfile.autotune
-         * WITHOUT the fix (no ,jdk.net in --add-modules line 46):
-         *   ModuleLayer.boot().findModule("jdk.net") → empty Optional
-         *   Class.forName("jdk.net.Sockets")         → ClassNotFoundException
-         *
-         * The assertFalse below then FAILS, printing exactly why.
+         * On a full JDK jdk.net is always present, so this test always passes
+         * in local development.  Inside a stripped jlink JRE that omits jdk.net,
+         * ModuleLayer.boot().findModule("jdk.net") returns an empty Optional and
+         * this assertion fails — surfacing the missing-module condition before it
+         * manifests as a production crash.
          */
-        boolean jdkNetModuleAbsent = ModuleLayer.boot().findModule("jdk.net").isEmpty();
-
-        assertFalse(
-                jdkNetModuleAbsent,
-                "The 'jdk.net' module is absent from " +
-                "this JRE. causing:\n" +
-                "  java.lang.NoClassDefFoundError: jdk/net/Sockets\n" +
-                "    at DefaultHttpClientConnectionOperator.<clinit>\n" +
-                "    at Apache5HttpClient.createClient\n" +
-                "    at CloudWatchAppender.configureLoggerForCloudWatchLog\n" +
-                "    at Autotune.main\n" +
-                "  Caused by: java.lang.ClassNotFoundException: jdk.net.Sockets\n\n" +
-                "Fix: add ',jdk.net' to --add-modules in Dockerfile.autotune line 46."
+        assertTrue(
+                ModuleLayer.boot().findModule("jdk.net").isPresent(),
+                "The 'jdk.net' module is absent from this JRE. " +
+                "Apache HttpClient 5 requires it and will crash at startup with: " +
+                "NoClassDefFoundError: jdk/net/Sockets. " +
+                "Ensure the jlink --add-modules list used to build this JRE includes jdk.net."
         );
     }
 
     // =========================================================================
-    // 3. POSITIVE — verifies the Dockerfile fix is in place
+    // 3. POSITIVE — verifies the runtime is correctly configured
     //
-    //    These pass only when ,jdk.net is present in the jlink --add-modules
-    //    list in Dockerfile.autotune.  On a developer JDK they always pass
-    //    (full JDK always has jdk.net); inside the jlink container image they
-    //    pass only after the fix.
+    //    On a developer JDK these always pass (full JDK always has jdk.net).
+    //    Inside a jlink JRE they pass only when jdk.net is included in the
+    //    --add-modules list used to build the image.
     // =========================================================================
 
     @Test
-    @DisplayName("POSITIVE: jdk.net.Sockets is loadable — confirms ,jdk.net is in the jlink JRE")
+    @DisplayName("POSITIVE: jdk.net.Sockets is loadable — jdk.net module is present in the JRE")
     void jdkNetSocketsMustBeLoadable() throws ClassNotFoundException {
         /*
-         * If this throws ClassNotFoundException the jlink JRE in the container
-         * was built WITHOUT ,jdk.net in --add-modules (Dockerfile.autotune line
-         * 46).  Apache HC5 will then crash at startup with:
+         * Apache HttpClient 5 loads jdk.net.Sockets in a static initializer.
+         * If this throws ClassNotFoundException the JRE is missing the jdk.net
+         * module and Apache HC5 will crash at startup with:
          *   NoClassDefFoundError: jdk/net/Sockets
-         * exactly as seen in the pod logs on the OpenShift stage cluster.
          */
         Class<?> socketsClass = Class.forName("jdk.net.Sockets");
         assertNotNull(
                 socketsClass,
-                "jdk.net.Sockets must be loadable. " +
-                "Add ',jdk.net' to --add-modules in Dockerfile.autotune line 46."
+                "jdk.net.Sockets must be loadable — ensure the jdk.net module " +
+                "is included in the --add-modules list used to build the JRE."
         );
     }
 
@@ -238,14 +225,14 @@ class CloudWatchAppenderTest {
         KruizeDeploymentInfo.cloudwatch_logs_log_level         = "INFO";
 
         // When / Then
-        // Any AWS auth/network error is caught inside the method at line 114-116.
-        // A NoClassDefFoundError: jdk/net/Sockets would NOT be caught there —
+        // Any AWS auth/network error is caught and logged inside the method.
+        // A NoClassDefFoundError: jdk/net/Sockets is NOT caught there —
         // it would propagate and fail this assertion, reproducing the prod crash.
         assertDoesNotThrow(
                 CloudWatchAppender::configureLoggerForCloudWatchLog,
                 "configureLoggerForCloudWatchLog() threw an unexpected error. " +
-                "If the error is NoClassDefFoundError: jdk/net/Sockets, " +
-                "add ',jdk.net' to --add-modules in Dockerfile.autotune line 46."
+                "If the cause is NoClassDefFoundError: jdk/net/Sockets, " +
+                "the jdk.net module is missing from the JRE."
         );
     }
 
