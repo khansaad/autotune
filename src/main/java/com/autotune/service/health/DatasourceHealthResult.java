@@ -15,48 +15,23 @@
  *******************************************************************************/
 package com.autotune.service.health;
 
-import java.util.Date;
-
 /**
- * Immutable result of a single datasource reachability/auth probe.
+ * Immutable health summary of a single datasource.
  * Serialised directly to JSON by Gson in the /health response.
- * The {@code message} field must never contain credentials, tokens or
- * connection strings — only safe, user-facing text from
- * {@link com.autotune.utils.KruizeConstants.HealthConstants.Messages}.
  */
 public class DatasourceHealthResult {
 
     private final String name;
     private final String provider;
-    private final String serviceName;
-    private final String namespace;
-    private final String url;
     private final String status;
-    private final long   latencyMs;
-    private final String message;
-    private final Date   checkedAt;
 
-    public DatasourceHealthResult(String name, String provider, String serviceName,
-                                  String namespace, String url, String status,
-                                  long latencyMs, String message, Date checkedAt) {
-        this.name        = name;
-        this.provider    = provider;
-        this.serviceName = serviceName;
-        this.namespace   = namespace;
-        this.url         = url;
-        this.status      = status;
-        this.latencyMs   = latencyMs;
-        this.message     = message;
-        this.checkedAt   = checkedAt;
+    public DatasourceHealthResult(String name, String provider, String status) {
+        this.name     = name;
+        this.provider = provider;
+        this.status   = status;
     }
 
-    public String getName()        { return name; }
-    public String getProvider()    { return provider; }
-    public String getServiceName() { return serviceName; }
-    public String getNamespace()   { return namespace; }
-    public String getUrl()         { return url; }
-    public String getStatus()      { return status; }
-    public long   getLatencyMs()   { return latencyMs; }
-    public String getMessage()     { return message; }
-    public Date   getCheckedAt()   { return checkedAt; }
+    public String getName()     { return name; }
+    public String getProvider() { return provider; }
+    public String getStatus()   { return status; }
 }

@@ -158,8 +158,7 @@ class KruizeHealthAggregatorTest {
         DataSourceCollection.getInstance().getDataSourcesCollection().put(ds2.getName(), ds2);
         // Build result objects before stubbing to avoid nested mock interactions
         DatasourceHealthResult upResult   = dsUp("prometheus-1", "prometheus");
-        DatasourceHealthResult downResult = dsDown("thanos-1", "prometheus",
-                KruizeConstants.HealthConstants.Messages.CONNECTION_REFUSED);
+        DatasourceHealthResult downResult = dsDown("thanos-1", "prometheus");
 
         when(mockDbChecker.check()).thenReturn(dbUp());
         when(mockDsChecker.check(ds1)).thenReturn(upResult);
@@ -188,8 +187,7 @@ class KruizeHealthAggregatorTest {
         // Given
         DataSourceInfo ds = fakeDatasource("prometheus-1", "prometheus");
         DataSourceCollection.getInstance().getDataSourcesCollection().put(ds.getName(), ds);
-        DatasourceHealthResult authFailResult = dsDown("prometheus-1", "prometheus",
-                KruizeConstants.HealthConstants.Messages.AUTHENTICATION_FAILED);
+        DatasourceHealthResult authFailResult = dsDown("prometheus-1", "prometheus");
 
         when(mockDbChecker.check()).thenReturn(dbUp());
         when(mockDsChecker.check(ds)).thenReturn(authFailResult);
@@ -201,10 +199,6 @@ class KruizeHealthAggregatorTest {
         assertEquals(KruizeConstants.HealthConstants.OverallStatus.DEGRADED, report.getOverallStatus());
         DatasourceHealthResult r = report.getDatasources().get(0);
         assertEquals(KruizeConstants.HealthConstants.ComponentStatus.DOWN, r.getStatus());
-        assertEquals(KruizeConstants.HealthConstants.Messages.AUTHENTICATION_FAILED, r.getMessage());
-        // Message must not contain any credential or token
-        assertFalse(r.getMessage().toLowerCase().contains("token"));
-        assertFalse(r.getMessage().toLowerCase().contains("password"));
     }
 
     // -------------------------------------------------------------------------
@@ -216,8 +210,7 @@ class KruizeHealthAggregatorTest {
         // Given
         DataSourceInfo ds = fakeDatasource("slow-ds", "prometheus");
         DataSourceCollection.getInstance().getDataSourcesCollection().put(ds.getName(), ds);
-        DatasourceHealthResult timeoutResult = dsDown("slow-ds", "prometheus",
-                KruizeConstants.HealthConstants.Messages.CONNECTION_TIMEOUT);
+        DatasourceHealthResult timeoutResult = dsDown("slow-ds", "prometheus");
 
         when(mockDbChecker.check()).thenReturn(dbUp());
         when(mockDsChecker.check(ds)).thenReturn(timeoutResult);
@@ -227,8 +220,8 @@ class KruizeHealthAggregatorTest {
 
         // Then
         assertEquals(KruizeConstants.HealthConstants.OverallStatus.DEGRADED, report.getOverallStatus());
-        assertEquals(KruizeConstants.HealthConstants.Messages.CONNECTION_TIMEOUT,
-                report.getDatasources().get(0).getMessage());
+        assertEquals(KruizeConstants.HealthConstants.ComponentStatus.DOWN,
+                report.getDatasources().get(0).getStatus());
     }
 
     // -------------------------------------------------------------------------
@@ -281,14 +274,11 @@ class KruizeHealthAggregatorTest {
      */
     private DatasourceHealthResult dsUp(String name, String provider) {
         return new DatasourceHealthResult(
-                name, provider, "svc-" + name, "monitoring", "",
-                KruizeConstants.HealthConstants.ComponentStatus.UP, 20L,
-                KruizeConstants.HealthConstants.Messages.CONNECTION_SUCCESSFUL, new Date());
+                name, provider, KruizeConstants.HealthConstants.ComponentStatus.UP);
     }
 
-    private DatasourceHealthResult dsDown(String name, String provider, String message) {
+    private DatasourceHealthResult dsDown(String name, String provider) {
         return new DatasourceHealthResult(
-                name, provider, "svc-" + name, "monitoring", "",
-                KruizeConstants.HealthConstants.ComponentStatus.DOWN, 0L, message, new Date());
+                name, provider, KruizeConstants.HealthConstants.ComponentStatus.DOWN);
     }
 }

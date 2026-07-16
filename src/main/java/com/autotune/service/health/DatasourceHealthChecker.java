@@ -24,7 +24,6 @@ import org.slf4j.LoggerFactory;
 
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
-import java.util.Date;
 
 /**
  * Checks whether a single datasource is reachable and healthy.
@@ -42,60 +41,45 @@ public class DatasourceHealthChecker {
     private static final Logger LOGGER = LoggerFactory.getLogger(DatasourceHealthChecker.class);
 
     /**
-     * Probes the given datasource and returns a fully-populated result.
+     * Probes the given datasource and returns a health summary.
      * Never throws — all failures are captured in the returned object.
      */
     public DatasourceHealthResult check(DataSourceInfo ds) {
-        String name        = ds.getName();
-        String provider    = ds.getProvider();
-        String serviceName = ds.getServiceName();
-        String namespace   = ds.getNamespace();
-        String url         = ds.getUrl() != null ? ds.getUrl().toString() : "";
-
-        long start = System.currentTimeMillis();
+        String name     = ds.getName();
+        String provider = ds.getProvider();
         try {
             DataSourceOperatorImpl op = DataSourceOperatorImpl.getInstance().getOperator(provider);
             if (op == null) {
                 LOGGER.warn("No operator available for datasource provider: {}", provider);
-                return down(name, provider, serviceName, namespace, url, start,
-                        KruizeConstants.HealthConstants.Messages.NO_CHECKER_AVAILABLE);
+                return down(name, provider);
             }
 
             CommonUtils.DatasourceReachabilityStatus status = op.isServiceable(ds);
-            long latencyMs = System.currentTimeMillis() - start;
-
             if (status == CommonUtils.DatasourceReachabilityStatus.REACHABLE) {
-                return new DatasourceHealthResult(name, provider, serviceName, namespace, url,
-                        KruizeConstants.HealthConstants.ComponentStatus.UP, latencyMs,
-                        KruizeConstants.HealthConstants.Messages.CONNECTION_SUCCESSFUL, new Date());
+                return new DatasourceHealthResult(name, provider,
+                        KruizeConstants.HealthConstants.ComponentStatus.UP);
             }
             LOGGER.warn("Datasource {} reported not reachable during health check", name);
-            return down(name, provider, serviceName, namespace, url, start,
-                    KruizeConstants.HealthConstants.Messages.CONNECTION_REFUSED);
+            return down(name, provider);
 
         } catch (UnknownHostException e) {
             LOGGER.warn("Health check for datasource {} failed — unknown host", name);
-            return down(name, provider, serviceName, namespace, url, start,
-                    KruizeConstants.HealthConstants.Messages.UNKNOWN_HOST);
+            return down(name, provider);
 
         } catch (SocketTimeoutException e) {
             LOGGER.warn("Health check for datasource {} timed out", name);
-            return down(name, provider, serviceName, namespace, url, start,
-                    KruizeConstants.HealthConstants.Messages.CONNECTION_TIMEOUT);
+            return down(name, provider);
 
         } catch (Exception e) {
             // Catches auth errors (401/403 surface as IOException), SSL failures, etc.
             // Never expose the exception message — it may contain credentials or tokens.
             LOGGER.warn("Health check for datasource {} failed: {}", name, e.getMessage());
-            return down(name, provider, serviceName, namespace, url, start,
-                    KruizeConstants.HealthConstants.Messages.CHECK_FAILED);
+            return down(name, provider);
         }
     }
 
-    private DatasourceHealthResult down(String name, String provider, String serviceName,
-                                        String namespace, String url, long startMs, String message) {
-        return new DatasourceHealthResult(name, provider, serviceName, namespace, url,
-                KruizeConstants.HealthConstants.ComponentStatus.DOWN,
-                System.currentTimeMillis() - startMs, message, new Date());
+    private DatasourceHealthResult down(String name, String provider) {
+        return new DatasourceHealthResult(name, provider,
+                KruizeConstants.HealthConstants.ComponentStatus.DOWN);
     }
 }

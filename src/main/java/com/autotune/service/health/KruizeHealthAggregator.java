@@ -90,12 +90,8 @@ public class KruizeHealthAggregator {
                         LOGGER.warn("Unexpected error checking datasource {}: {}",
                                 ds.getName(), ex.getMessage());
                         return new DatasourceHealthResult(
-                                ds.getName(), ds.getProvider(), ds.getServiceName(),
-                                ds.getNamespace(),
-                                ds.getUrl() != null ? ds.getUrl().toString() : "",
-                                KruizeConstants.HealthConstants.ComponentStatus.DOWN, 0L,
-                                KruizeConstants.HealthConstants.Messages.CHECK_FAILED,
-                                new Date());
+                                ds.getName(), ds.getProvider(),
+                                KruizeConstants.HealthConstants.ComponentStatus.DOWN);
                     });
             futures.add(f);
         }
