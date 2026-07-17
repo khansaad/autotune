@@ -225,7 +225,30 @@ class KruizeHealthAggregatorTest {
     }
 
     // -------------------------------------------------------------------------
-    // Scenario 7 — empty datasource list (explicitly empty, DB up)
+    // Scenario 7 — checker throws unexpectedly
+    // -------------------------------------------------------------------------
+    @Test
+    @DisplayName("DEGRADED — datasource checker throws unexpectedly")
+    void shouldReturnDegradedWhenDatasourceCheckerThrows() {
+        // Given
+        DataSourceInfo ds = fakeDatasource("broken-ds", "prometheus");
+        DataSourceCollection.getInstance().getDataSourcesCollection().put(ds.getName(), ds);
+
+        when(mockDbChecker.check()).thenReturn(dbUp());
+        when(mockDsChecker.check(ds)).thenThrow(new RuntimeException("boom"));
+
+        // When
+        HealthReport report = aggregator.collectHealth();
+
+        // Then
+        assertEquals(KruizeConstants.HealthConstants.OverallStatus.DEGRADED, report.getOverallStatus());
+        assertEquals(1, report.getDatasources().size());
+        assertEquals(KruizeConstants.HealthConstants.ComponentStatus.DOWN,
+                report.getDatasources().get(0).getStatus());
+    }
+
+    // -------------------------------------------------------------------------
+    // Scenario 8 — empty datasource list (explicitly empty, DB up)
     // -------------------------------------------------------------------------
     @Test
     @DisplayName("UP — healthy DB, datasource list explicitly empty")
@@ -258,14 +281,12 @@ class KruizeHealthAggregatorTest {
 
     private DatabaseHealthResult dbUp() {
         return new DatabaseHealthResult(
-                KruizeConstants.HealthConstants.ComponentStatus.UP,
-                KruizeConstants.HealthConstants.DB_TYPE, 10L, new Date());
+                KruizeConstants.HealthConstants.ComponentStatus.UP);
     }
 
     private DatabaseHealthResult dbDown() {
         return new DatabaseHealthResult(
-                KruizeConstants.HealthConstants.ComponentStatus.DOWN,
-                KruizeConstants.HealthConstants.DB_TYPE, 0L, new Date());
+                KruizeConstants.HealthConstants.ComponentStatus.DOWN);
     }
 
     /**

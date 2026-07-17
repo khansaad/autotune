@@ -42,7 +42,7 @@ import static com.autotune.analyzer.utils.AnalyzerConstants.ServiceConstants.JSO
  * <pre>
  * {
  *   "overallStatus": "UP | DEGRADED | DOWN",
- *   "database":   { "status": "UP", "database": "PostgreSQL", "latencyMs": 14, "checkedAt": "..." },
+ *   "database":   { "status": "UP" },
  *   "datasources": [ { "name": "prometheus-1", "status": "UP", ... } ],
  *   "timestamp":  "2025-01-01T12:00:00.000Z"
  * }

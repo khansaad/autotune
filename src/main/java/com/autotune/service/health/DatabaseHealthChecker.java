@@ -22,7 +22,6 @@ import org.hibernate.SessionFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Date;
 
 /**
  * Checks whether the Kruize PostgreSQL database is reachable by opening a
@@ -42,27 +41,22 @@ public class DatabaseHealthChecker {
      *         Status is {@code "UP"} on success, {@code "DOWN"} on any failure.
      */
     public DatabaseHealthResult check() {
-        long start = System.currentTimeMillis();
         Session session = null;
         try {
             SessionFactory factory = KruizeHibernateUtil.getSessionFactory();
             if (factory == null) {
                 LOGGER.warn("Hibernate SessionFactory is null — DB not initialised");
-                return down(start);
+                return down();
             }
             session = factory.openSession();
             session.createNativeQuery(KruizeConstants.HealthConstants.DB_LIVENESS_QUERY, Integer.class)
                    .getSingleResult();
-            long latencyMs = System.currentTimeMillis() - start;
-            LOGGER.debug("DB health check passed in {}ms", latencyMs);
+            LOGGER.debug("DB health check passed");
             return new DatabaseHealthResult(
-                    KruizeConstants.HealthConstants.ComponentStatus.UP,
-                    KruizeConstants.HealthConstants.DB_TYPE,
-                    latencyMs,
-                    new Date());
+                    KruizeConstants.HealthConstants.ComponentStatus.UP);
         } catch (Exception e) {
             LOGGER.warn("DB health check failed: {}", e.getMessage());
-            return down(start);
+            return down();
         } finally {
             if (session != null) {
                 try {
@@ -74,11 +68,8 @@ public class DatabaseHealthChecker {
         }
     }
 
-    private DatabaseHealthResult down(long startMs) {
+    private DatabaseHealthResult down() {
         return new DatabaseHealthResult(
-                KruizeConstants.HealthConstants.ComponentStatus.DOWN,
-                KruizeConstants.HealthConstants.DB_TYPE,
-                System.currentTimeMillis() - startMs,
-                new Date());
+                KruizeConstants.HealthConstants.ComponentStatus.DOWN);
     }
 }

@@ -15,39 +15,19 @@
  *******************************************************************************/
 package com.autotune.service.health;
 
-import java.util.Date;
-
 /**
- * Immutable result of a single database liveness probe.
+ * Immutable health summary of the database.
  * Serialised directly to JSON by Gson in the /health response.
  */
 public class DatabaseHealthResult {
 
     private final String status;
-    private final String database;
-    private final long latencyMs;
-    private final Date checkedAt;
 
-    public DatabaseHealthResult(String status, String database, long latencyMs, Date checkedAt) {
-        this.status    = status;
-        this.database  = database;
-        this.latencyMs = latencyMs;
-        this.checkedAt = checkedAt;
+    public DatabaseHealthResult(String status) {
+        this.status = status;
     }
 
     public String getStatus() {
         return status;
-    }
-
-    public String getDatabase() {
-        return database;
-    }
-
-    public long getLatencyMs() {
-        return latencyMs;
-    }
-
-    public Date getCheckedAt() {
-        return checkedAt;
     }
 }

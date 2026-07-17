@@ -82,29 +82,37 @@ public class KruizeHealthAggregator {
     }
 
     private List<DatasourceHealthResult> checkInParallel(Collection<DataSourceInfo> dataSources) {
+        List<DataSourceInfo> dataSourceList = new ArrayList<>(dataSources);
         List<CompletableFuture<DatasourceHealthResult>> futures = new ArrayList<>();
-        for (DataSourceInfo ds : dataSources) {
+        for (DataSourceInfo ds : dataSourceList) {
             CompletableFuture<DatasourceHealthResult> f = CompletableFuture
                     .supplyAsync(() -> dsChecker.check(ds), executor)
                     .exceptionally(ex -> {
                         LOGGER.warn("Unexpected error checking datasource {}: {}",
                                 ds.getName(), ex.getMessage());
-                        return new DatasourceHealthResult(
-                                ds.getName(), ds.getProvider(),
-                                KruizeConstants.HealthConstants.ComponentStatus.DOWN);
+                        return downResult(ds);
                     });
             futures.add(f);
         }
 
         List<DatasourceHealthResult> results = new ArrayList<>();
+        int index = 0;
         for (CompletableFuture<DatasourceHealthResult> f : futures) {
+            DataSourceInfo ds = dataSourceList.get(index++);
             try {
                 results.add(f.get(dsTimeoutSeconds + 1L, TimeUnit.SECONDS));
             } catch (Exception e) {
-                LOGGER.warn("Datasource health future timed out: {}", e.getMessage());
+                LOGGER.warn("Datasource health future timed out for {}: {}", ds.getName(), e.getMessage());
+                results.add(downResult(ds));
             }
         }
         return results;
+    }
+
+    private DatasourceHealthResult downResult(DataSourceInfo ds) {
+        return new DatasourceHealthResult(
+                ds.getName(), ds.getProvider(),
+                KruizeConstants.HealthConstants.ComponentStatus.DOWN);
     }
 
     private String computeOverallStatus(DatabaseHealthResult db,
