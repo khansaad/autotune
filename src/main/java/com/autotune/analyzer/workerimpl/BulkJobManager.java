@@ -513,6 +513,9 @@ public class BulkJobManager implements Runnable {
             for (DataSource ds : dataSourceCollection) {
                 HashMap<String, DataSourceCluster> clusterHashMap = ds.getClusters();
                 for (DataSourceCluster dsc : clusterHashMap.values()) {
+                    String clusterName = this.bulkInput.getCluster_name() != null
+                            ? this.bulkInput.getCluster_name()
+                            : dsc.getDataSourceClusterName();
                     HashMap<String, DataSourceNamespace> namespaceHashMap = dsc.getNamespaces();
                     for (DataSourceNamespace namespace : namespaceHashMap.values()) {
                         HashMap<String, DataSourceWorkload> dataSourceWorkloadHashMap = namespace.getWorkloads();
@@ -522,10 +525,10 @@ public class BulkJobManager implements Runnable {
                                 if (dataSourceContainerHashMap != null) {
                                     for (DataSourceContainer dc : dataSourceContainerHashMap.values()) {
                                         // Experiment name - dynamically constructed
-                                        String experiment_name = frameExperimentName(labelString, dsc, namespace, dsw, dc);
+                                        String experiment_name = frameExperimentName(labelString, clusterName, namespace, dsw, dc);
                                         // create JSON to be passed in the createExperimentAPI
                                         List<CreateExperimentAPIObject> createExperimentAPIObjectList = new ArrayList<>();
-                                        CreateExperimentAPIObject apiObject = prepareCreateExperimentJSONInput(dc, dsc, dsw, namespace,
+                                        CreateExperimentAPIObject apiObject = prepareCreateExperimentJSONInput(dc, clusterName, dsw, namespace,
                                                 experiment_name, createExperimentAPIObjectList);
                                         createExperimentAPIObjectMap.put(experiment_name, apiObject);
                                     }
@@ -609,14 +612,14 @@ public class BulkJobManager implements Runnable {
 
     /**
      * @param dc                         DataSourceContainer object to get the container details
-     * @param dsc                        DataSourceCluster object to get the cluster details
+     * @param clusterName                resolved cluster name (user override or data source cluster name)
      * @param dsw                        DataSourceWorkload object to get the workload details
      * @param namespace                  DataSourceNamespace object to get the namespace details
      * @param createExperimentAPIObjects
      * @return Json string to be sent to the createExperimentAPI for experiment creation
      * @throws JsonProcessingException
      */
-    private CreateExperimentAPIObject prepareCreateExperimentJSONInput(DataSourceContainer dc, DataSourceCluster dsc, DataSourceWorkload dsw,
+    private CreateExperimentAPIObject prepareCreateExperimentJSONInput(DataSourceContainer dc, String clusterName, DataSourceWorkload dsw,
                                                                        DataSourceNamespace namespace, String experiment_name, List<CreateExperimentAPIObject> createExperimentAPIObjects) throws IOException {
 
         CreateExperimentAPIObject createExperimentAPIObject = new CreateExperimentAPIObject();
@@ -625,7 +628,7 @@ public class BulkJobManager implements Runnable {
         createExperimentAPIObject.setApiVersion(CREATE_EXPERIMENT_CONFIG_BEAN.getVersion());
         createExperimentAPIObject.setExperimentName(experiment_name);
         createExperimentAPIObject.setDatasource(this.bulkInput.getDatasource());
-        createExperimentAPIObject.setClusterName(dsc.getDataSourceClusterName());
+        createExperimentAPIObject.setClusterName(clusterName);
         createExperimentAPIObject.setPerformanceProfile(CREATE_EXPERIMENT_CONFIG_BEAN.getPerformanceProfile());
         createExperimentAPIObject.setMetadataProfile(CREATE_EXPERIMENT_CONFIG_BEAN.getMetadataProfile());
         List<KubernetesAPIObject> kubernetesAPIObjectList = new ArrayList<>();
@@ -638,8 +641,11 @@ public class BulkJobManager implements Runnable {
         kubernetesAPIObject.setNamespace(namespace.getNamespace());
         kubernetesAPIObjectList.add(kubernetesAPIObject);
         createExperimentAPIObject.setKubernetesObjects(kubernetesAPIObjectList);
+        
+        // Create recommendation settings with threshold
         RecommendationSettings rs = new RecommendationSettings();
         rs.setThreshold(CREATE_EXPERIMENT_CONFIG_BEAN.getThreshold());
+        
         createExperimentAPIObject.setRecommendationSettings(rs);
         TrialSettings trialSettings = new TrialSettings();
         trialSettings.setMeasurement_durationMinutes(CREATE_EXPERIMENT_CONFIG_BEAN.getMeasurementDurationStr());
@@ -662,10 +668,9 @@ public class BulkJobManager implements Runnable {
      * @param dataSourceContainer
      * @return
      */
-    public String frameExperimentName(String labelString, DataSourceCluster dataSourceCluster, DataSourceNamespace dataSourceNamespace, DataSourceWorkload dataSourceWorkload, DataSourceContainer dataSourceContainer) {
+    public String frameExperimentName(String labelString, String clusterName, DataSourceNamespace dataSourceNamespace, DataSourceWorkload dataSourceWorkload, DataSourceContainer dataSourceContainer) {
 
         String datasource = this.bulkInput.getDatasource();
-        String clusterName = dataSourceCluster.getDataSourceClusterName();
         String namespace = dataSourceNamespace.getNamespace();
         String workloadName = dataSourceWorkload.getWorkloadName();
         String workloadType = dataSourceWorkload.getWorkloadType();

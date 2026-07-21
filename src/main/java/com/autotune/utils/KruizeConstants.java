@@ -974,6 +974,16 @@ public class KruizeConstants {
         public static final String INVALID_DATE_FORMAT = "Invalid date format. Must follow ISO 8601 format (YYYY-MM-DDTHH:mm:ss.sssZ)";
         public static final String TIME_RANGE_EXCEPTION = "Exception occurred while validating the time range";
 
+        // cluster_name validation
+        /**
+         * Maximum allowed length for a cluster_name value.
+         * 253 is the maximum length of a DNS subdomain as defined in RFC 1123,
+         * which Kubernetes adopts as the upper bound for cluster-scoped identifiers.
+         */
+        public static final int MAX_CLUSTER_NAME_LENGTH = 253;
+        public static final String CLUSTER_NAME_EMPTY = "cluster_name cannot be an empty string";
+        public static final String CLUSTER_NAME_TOO_LONG = "cluster_name is too long (max %d characters, got %d)";
+
 
 
         // TODO : Bulk API Create Experiments defaults
