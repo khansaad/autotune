@@ -216,10 +216,13 @@ public class BulkConfig {
      * Recommendation settings for the optimiser bulk config
      */
     public static class RecommendationSettings {
+        @JsonProperty("scheduling")
         private String scheduling;
 
+        @JsonProperty("terms")
         private List<String> terms = new ArrayList<>();
 
+        @JsonProperty("models")
         private List<String> models = new ArrayList<>();
 
         public RecommendationSettings() {
