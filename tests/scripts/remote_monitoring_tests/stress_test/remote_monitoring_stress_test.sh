@@ -295,37 +295,37 @@ function check_jmeter_results() {
 	exit ${overall_rc}
 }
 
-function java17_install() {
-	# Check if Java 17 is already available
-	if java -version 2>&1 | grep -q 'version "17'; then
-		echo "Java 17 is already installed." | tee -a ${LOG}
-		JAVA17_HOME=$(dirname $(dirname $(readlink -f $(which java))))
+function java21_install() {
+	JAVA_VERSION=21.0.11_10
+	JAVA_URL="https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.11%2B10/OpenJDK21U-jdk_x64_linux_hotspot_21.0.11_10.tar.gz"
+	JAVA_INSTALL_DIR=/tmp/temurin21
+
+	# Check if Temurin 21 is already installed at the expected location
+	if [ -x "${JAVA_INSTALL_DIR}/bin/java" ]; then
+		echo "Temurin 21 is already installed at ${JAVA_INSTALL_DIR}." | tee -a ${LOG}
 	else
-		echo "Java 17 not found. Installing Java 17..." | tee -a ${LOG}
-		if command -v dnf &>/dev/null; then
-			sudo dnf install -y java-17-openjdk-headless
-			JAVA17_HOME=$(dirname $(dirname $(readlink -f $(which java))))
-		elif command -v yum &>/dev/null; then
-			sudo yum install -y java-17-openjdk-headless
-			JAVA17_HOME=$(dirname $(dirname $(readlink -f $(which java))))
-		elif command -v apt-get &>/dev/null; then
-			sudo apt-get install -y openjdk-17-jdk-headless
-			JAVA17_HOME=$(update-java-alternatives -l 2>/dev/null | grep java-1.17 | awk '{print $3}' || dirname $(dirname $(readlink -f $(which java))))
-		else
-			echo "ERROR: No supported package manager found (dnf/yum/apt-get). Please install Java 17 manually." | tee -a ${LOG}
+		echo "Temurin 21 not found. Downloading from ${JAVA_URL} ..." | tee -a ${LOG}
+		local tarball
+		tarball=$(mktemp --suffix=.tar.gz)
+		if ! wget -q -O "${tarball}" "${JAVA_URL}"; then
+			echo "ERROR: Failed to download Temurin 21 from ${JAVA_URL}" | tee -a ${LOG}
+			rm -f "${tarball}"
 			exit 1
 		fi
-		echo "Java 17 installation complete." | tee -a ${LOG}
+		mkdir -p "${JAVA_INSTALL_DIR}"
+		tar -xzf "${tarball}" --strip-components=1 -C "${JAVA_INSTALL_DIR}"
+		rm -f "${tarball}"
+		echo "Temurin 21 installation complete." | tee -a ${LOG}
 	fi
 
-	export JAVA_HOME="${JAVA17_HOME}"
+	export JAVA_HOME="${JAVA_INSTALL_DIR}"
 	export PATH="${JAVA_HOME}/bin:${PATH}"
 	echo "JAVA_HOME set to ${JAVA_HOME}" | tee -a ${LOG}
 	java -version 2>&1 | tee -a ${LOG}
 }
 
 function jmeter_setup() {
-	JMETER_VERSION="5.5"
+	JMETER_VERSION="5.6.3"
 
 	if [ ! -d ${CURRENT_DIR}/apache-jmeter-${JMETER_VERSION} ]; then
 		echo "Downloading jmeter..." | tee -a ${LOG}
@@ -404,9 +404,9 @@ fi
 JMETER_LOG_DIR="${LOG_DIR}/jmeter_logs" 
 mkdir -p ${JMETER_LOG_DIR}
 
-echo "Installing Java 17 prerequisite for jmeter..." | tee -a ${LOG}
-java17_install
-echo "Installing Java 17 prerequisite for jmeter...done" | tee -a ${LOG}
+echo "Installing Java 21 prerequisite for jmeter..." | tee -a ${LOG}
+java21_install
+echo "Installing Java 21 prerequisite for jmeter...done" | tee -a ${LOG}
 
 echo "Invoking jmeter setup" | tee -a ${LOG}
 jmeter_setup
