@@ -70,7 +70,7 @@ public class KruizeBulkConfigEntry {
     @Column(name = "recommendation_settings", columnDefinition = "jsonb", nullable = false)
     private JsonNode recommendationSettings;
 
-    @Column(name = "webhook_url", columnDefinition = "VARCHAR(500)", nullable = false)
+    @Column(name = "webhook_url", columnDefinition = "VARCHAR(500)")
     private String webhookUrl;
 
     @Column(name = "enabled", nullable = false)
