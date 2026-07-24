@@ -297,25 +297,25 @@ function check_jmeter_results() {
 
 function java21_install() {
 	JAVA_VERSION=21.0.11_10
-	JAVA_URL="https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.11%2B10/OpenJDK21U-jdk_x64_linux_hotspot_21.0.11_10.tar.gz"
+	JAVA_URL="https://github.com/adoptium/temurin21-binaries/releases/download/${JAVA_VERSION}/OpenJDK21U-jdk_x64_linux_hotspot_${JAVA_VERSION}.tar.gz"
 	JAVA_INSTALL_DIR=/tmp/temurin21
 
 	# Check if Temurin 21 is already installed at the expected location
 	if [ -x "${JAVA_INSTALL_DIR}/bin/java" ]; then
-		echo "Temurin 21 is already installed at ${JAVA_INSTALL_DIR}." | tee -a ${LOG}
+		echo "Java is already installed at ${JAVA_INSTALL_DIR}." | tee -a ${LOG}
 	else
-		echo "Temurin 21 not found. Downloading from ${JAVA_URL} ..." | tee -a ${LOG}
+		echo "Java not found. Downloading from ${JAVA_URL} ..." | tee -a ${LOG}
 		local tarball
 		tarball=$(mktemp --suffix=.tar.gz)
 		if ! wget -q -O "${tarball}" "${JAVA_URL}"; then
-			echo "ERROR: Failed to download Temurin 21 from ${JAVA_URL}" | tee -a ${LOG}
+			echo "ERROR: Failed to download Java from ${JAVA_URL}" | tee -a ${LOG}
 			rm -f "${tarball}"
 			exit 1
 		fi
 		mkdir -p "${JAVA_INSTALL_DIR}"
 		tar -xzf "${tarball}" --strip-components=1 -C "${JAVA_INSTALL_DIR}"
 		rm -f "${tarball}"
-		echo "Temurin 21 installation complete." | tee -a ${LOG}
+		echo "Java installation complete." | tee -a ${LOG}
 	fi
 
 	export JAVA_HOME="${JAVA_INSTALL_DIR}"
