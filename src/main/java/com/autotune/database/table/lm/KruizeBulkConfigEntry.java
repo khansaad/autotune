@@ -35,11 +35,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Database entity to store Kruize optimiser bulk configuration.
+ * Database entity to store Kruize optimizer bulk configuration.
  * Aligned with CreateExperiment structure for consistency.
  */
 @Entity
-@Table(name = "kruize_optimiser_bulk_config")
+@Table(name = "kruize_optimizer_bulk_config")
 public class KruizeBulkConfigEntry {
     private static final Logger LOGGER = LoggerFactory.getLogger(KruizeBulkConfigEntry.class);
     private static final ObjectMapper objectMapper = new ObjectMapper();
@@ -211,41 +211,42 @@ public class KruizeBulkConfigEntry {
 
     /**
      * Convert this entity to a BulkConfig service object
+     * @throws RuntimeException if required fields are null or conversion fails
      */
     public BulkConfig toBulkConfig() {
         BulkConfig config = new BulkConfig();
         config.setConfigName(this.configName);
         config.setClusterName(this.clusterName);
         
-        // Convert JsonNode to List<String> for datasources
-        if (this.datasources != null) {
-            try {
-                List<String> datasourceList = objectMapper.convertValue(
-                    this.datasources,
-                    new TypeReference<List<String>>() {}
-                );
-                config.setDatasources(datasourceList);
-            } catch (Exception e) {
-                LOGGER.error("Error converting datasources: {}", e.getMessage());
-                config.setDatasources(new ArrayList<>());
-            }
+        // Required field: datasources
+        if (this.datasources == null) {
+            throw new IllegalStateException("Datasources cannot be null for config: " + configName);
+        }
+        try {
+            List<String> datasourceList = objectMapper.convertValue(
+                this.datasources,
+                new TypeReference<List<String>>() {}
+            );
+            config.setDatasources(datasourceList);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to convert datasources for config: " + configName, e);
         }
         
-        // Convert JsonNode to List<String> for namespaces
-        if (this.namespaces != null) {
-            try {
-                List<String> namespaceList = objectMapper.convertValue(
-                    this.namespaces,
-                    new TypeReference<List<String>>() {}
-                );
-                config.setNamespaces(namespaceList);
-            } catch (Exception e) {
-                LOGGER.error("Error converting namespaces: {}", e.getMessage());
-                config.setNamespaces(new ArrayList<>());
-            }
+        // Required field: namespaces
+        if (this.namespaces == null) {
+            throw new IllegalStateException("Namespaces cannot be null for config: " + configName);
+        }
+        try {
+            List<String> namespaceList = objectMapper.convertValue(
+                this.namespaces,
+                new TypeReference<List<String>>() {}
+            );
+            config.setNamespaces(namespaceList);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to convert namespaces for config: " + configName, e);
         }
         
-        // Convert JsonNode to Map<String, String> for labels
+        // Optional field: labels
         if (this.labels != null) {
             try {
                 Map<String, String> labelsMap = objectMapper.convertValue(
@@ -254,29 +255,28 @@ public class KruizeBulkConfigEntry {
                 );
                 config.setLabels(labelsMap);
             } catch (Exception e) {
-                LOGGER.error("Error converting labels: {}", e.getMessage());
-                config.setLabels(new HashMap<>());
+                throw new RuntimeException("Failed to convert labels for config: " + configName, e);
             }
         }
         
-        // Convert JsonNode to List<String> for experiment types
-        if (this.experimentTypes != null) {
-            try {
-                List<String> experimentTypeList = objectMapper.convertValue(
-                    this.experimentTypes,
-                    new TypeReference<List<String>>() {}
-                );
-                config.setExperimentTypes(experimentTypeList);
-            } catch (Exception e) {
-                LOGGER.error("Error converting experiment types: {}", e.getMessage());
-                config.setExperimentTypes(new ArrayList<>());
-            }
+        // Required field: experiment types
+        if (this.experimentTypes == null) {
+            throw new IllegalStateException("Experiment types cannot be null for config: " + configName);
+        }
+        try {
+            List<String> experimentTypeList = objectMapper.convertValue(
+                this.experimentTypes,
+                new TypeReference<List<String>>() {}
+            );
+            config.setExperimentTypes(experimentTypeList);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to convert experiment types for config: " + configName, e);
         }
         
         config.setMetadataProfile(this.metadataProfile);
         config.setPerformanceProfile(this.performanceProfile);
         
-        // Convert JsonNode to TrialSettings
+        // Optional field: trial settings
         if (this.trialSettings != null) {
             try {
                 BulkConfig.TrialSettings trialSettings = objectMapper.convertValue(
@@ -285,21 +285,22 @@ public class KruizeBulkConfigEntry {
                 );
                 config.setTrialSettings(trialSettings);
             } catch (Exception e) {
-                LOGGER.error("Error converting trial settings: {}", e.getMessage());
+                throw new RuntimeException("Failed to convert trial settings for config: " + configName, e);
             }
         }
         
-        // Convert JsonNode to RecommendationSettings
-        if (this.recommendationSettings != null) {
-            try {
-                BulkConfig.RecommendationSettings recSettings = objectMapper.convertValue(
-                    this.recommendationSettings,
-                    BulkConfig.RecommendationSettings.class
-                );
-                config.setRecommendationSettings(recSettings);
-            } catch (Exception e) {
-                LOGGER.error("Error converting recommendation settings: {}", e.getMessage());
-            }
+        // Required field: recommendation settings
+        if (this.recommendationSettings == null) {
+            throw new IllegalStateException("Recommendation settings cannot be null for config: " + configName);
+        }
+        try {
+            BulkConfig.RecommendationSettings recSettings = objectMapper.convertValue(
+                this.recommendationSettings,
+                BulkConfig.RecommendationSettings.class
+            );
+            config.setRecommendationSettings(recSettings);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to convert recommendation settings for config: " + configName, e);
         }
         
         config.setWebhookUrl(this.webhookUrl);
@@ -317,67 +318,72 @@ public class KruizeBulkConfigEntry {
 
     /**
      * Create an entity from a BulkConfig service object
+     * @throws RuntimeException if required fields are null or conversion fails
      */
     public static KruizeBulkConfigEntry fromBulkConfig(BulkConfig config) {
         KruizeBulkConfigEntry entry = new KruizeBulkConfigEntry();
         entry.setConfigName(config.getConfigName());
         entry.setClusterName(config.getClusterName());
         
-        // Convert List<String> to JsonNode for datasources
-        if (config.getDatasources() != null) {
-            try {
-                entry.setDatasources(objectMapper.valueToTree(config.getDatasources()));
-            } catch (Exception e) {
-                LOGGER.error("Error converting datasources: {}", e.getMessage());
-            }
+        // Required field: datasources
+        if (config.getDatasources() == null) {
+            throw new IllegalArgumentException("Datasources cannot be null for config: " + config.getConfigName());
+        }
+        try {
+            entry.setDatasources(objectMapper.valueToTree(config.getDatasources()));
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to convert datasources for config: " + config.getConfigName(), e);
         }
         
-        // Convert List<String> to JsonNode for namespaces
-        if (config.getNamespaces() != null) {
-            try {
-                entry.setNamespaces(objectMapper.valueToTree(config.getNamespaces()));
-            } catch (Exception e) {
-                LOGGER.error("Error converting namespaces: {}", e.getMessage());
-            }
+        // Required field: namespaces
+        if (config.getNamespaces() == null) {
+            throw new IllegalArgumentException("Namespaces cannot be null for config: " + config.getConfigName());
+        }
+        try {
+            entry.setNamespaces(objectMapper.valueToTree(config.getNamespaces()));
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to convert namespaces for config: " + config.getConfigName(), e);
         }
         
-        // Convert Map<String, String> to JsonNode for labels
+        // Optional field: labels
         if (config.getLabels() != null) {
             try {
                 entry.setLabels(objectMapper.valueToTree(config.getLabels()));
             } catch (Exception e) {
-                LOGGER.error("Error converting labels: {}", e.getMessage());
+                throw new RuntimeException("Failed to convert labels for config: " + config.getConfigName(), e);
             }
         }
         
-        // Convert List<String> to JsonNode for experiment types
-        if (config.getExperimentTypes() != null) {
-            try {
-                entry.setExperimentTypes(objectMapper.valueToTree(config.getExperimentTypes()));
-            } catch (Exception e) {
-                LOGGER.error("Error converting experiment types: {}", e.getMessage());
-            }
+        // Required field: experiment types
+        if (config.getExperimentTypes() == null) {
+            throw new IllegalArgumentException("Experiment types cannot be null for config: " + config.getConfigName());
+        }
+        try {
+            entry.setExperimentTypes(objectMapper.valueToTree(config.getExperimentTypes()));
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to convert experiment types for config: " + config.getConfigName(), e);
         }
         
         entry.setMetadataProfile(config.getMetadataProfile());
         entry.setPerformanceProfile(config.getPerformanceProfile());
         
-        // Convert TrialSettings to JsonNode
+        // Optional field: trial settings
         if (config.getTrialSettings() != null) {
             try {
                 entry.setTrialSettings(objectMapper.valueToTree(config.getTrialSettings()));
             } catch (Exception e) {
-                LOGGER.error("Error converting trial settings: {}", e.getMessage());
+                throw new RuntimeException("Failed to convert trial settings for config: " + config.getConfigName(), e);
             }
         }
         
-        // Convert RecommendationSettings to JsonNode
-        if (config.getRecommendationSettings() != null) {
-            try {
-                entry.setRecommendationSettings(objectMapper.valueToTree(config.getRecommendationSettings()));
-            } catch (Exception e) {
-                LOGGER.error("Error converting recommendation settings: {}", e.getMessage());
-            }
+        // Required field: recommendation settings
+        if (config.getRecommendationSettings() == null) {
+            throw new IllegalArgumentException("Recommendation settings cannot be null for config: " + config.getConfigName());
+        }
+        try {
+            entry.setRecommendationSettings(objectMapper.valueToTree(config.getRecommendationSettings()));
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to convert recommendation settings for config: " + config.getConfigName(), e);
         }
         
         entry.setWebhookUrl(config.getWebhookUrl());
