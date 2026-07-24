@@ -318,9 +318,16 @@ public class KruizeBulkConfigEntry {
 
     /**
      * Create an entity from a BulkConfig service object
-     * @throws RuntimeException if required fields are null or conversion fails
+     * @param config the BulkConfig object to convert
+     * @return KruizeBulkConfigEntry entity
+     * @throws IllegalArgumentException if config is null or required fields are null
+     * @throws RuntimeException if conversion fails
      */
     public static KruizeBulkConfigEntry fromBulkConfig(BulkConfig config) {
+        if (config == null) {
+            throw new IllegalArgumentException("BulkConfig cannot be null");
+        }
+        
         KruizeBulkConfigEntry entry = new KruizeBulkConfigEntry();
         entry.setConfigName(config.getConfigName());
         entry.setClusterName(config.getClusterName());
