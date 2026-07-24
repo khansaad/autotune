@@ -67,7 +67,7 @@ public class KruizeBulkConfigEntry {
     @Column(name = "experiment_types", columnDefinition = "jsonb", nullable = false)
     private JsonNode experimentTypes;
 
-    @Column(name = "metadata_profile", columnDefinition = "VARCHAR(255)", nullable = false)
+    @Column(name = "metadata_profile", columnDefinition = "VARCHAR(255)")
     private String metadataProfile;
 
     @Column(name = "performance_profile", columnDefinition = "VARCHAR(255)", nullable = false)
