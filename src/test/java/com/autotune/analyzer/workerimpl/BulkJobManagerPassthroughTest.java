@@ -93,60 +93,74 @@ class BulkJobManagerPassthroughTest {
     @DisplayName("Cluster Name Passthrough Tests")
     class ClusterNamePassthroughTests {
 
+        /**
+         * Mirrors the resolution logic in BulkJobManager.getExperimentMap():
+         *   clusterName = bulkInput.getCluster_name() != null
+         *       ? bulkInput.getCluster_name()
+         *       : dsc.getDataSourceClusterName();
+         */
+        private String resolveClusterName(String payloadCluster, String metadataCluster) {
+            return payloadCluster != null ? payloadCluster : metadataCluster;
+        }
+
         @Test
-        @DisplayName("Should return cluster name from bulk payload when provided")
-        void shouldReturnClusterNameFromBulkPayload() {
-            // Given
+        @DisplayName("Payload cluster name is used in experiment name when provided")
+        void payloadClusterNameAppearsInExperimentName() {
+            // Given – bulk payload supplies an explicit cluster name
             when(bulkInput.getCluster_name()).thenReturn("custom-cluster");
+            String resolved = resolveClusterName(bulkInput.getCluster_name(),
+                    cluster.getDataSourceClusterName());
 
-            // When
-            String clusterName = bulkInput.getCluster_name();
+            // When – frameExperimentName builds the name from the resolved cluster
+            String experimentName = bulkJobManager.frameExperimentName(
+                    null, resolved, namespace, workload, container
+            );
 
-            // Then
-            assertEquals("custom-cluster", clusterName,
-                    "Should return cluster name from bulk payload");
+            // Then – the payload cluster name, not the metadata cluster, appears in the result
+            assertEquals("prometheus-custom-cluster-default-test-app-deployment-app-container",
+                    experimentName,
+                    "Experiment name must embed the cluster name supplied in the bulk payload");
+            assertFalse(experimentName.contains("metadata-cluster"),
+                    "Metadata cluster name must not leak into the experiment name when payload overrides it");
         }
 
         @Test
-        @DisplayName("Should return null when bulk payload cluster is null")
-        void shouldReturnNullWhenBulkPayloadClusterIsNull() {
-            // Given
+        @DisplayName("Metadata cluster name is used in experiment name when payload cluster is null")
+        void metadataClusterNameUsedWhenPayloadClusterIsNull() {
+            // Given – no cluster in the payload → fall back to data-source metadata
             when(bulkInput.getCluster_name()).thenReturn(null);
+            String resolved = resolveClusterName(bulkInput.getCluster_name(),
+                    cluster.getDataSourceClusterName());
 
             // When
-            String clusterName = bulkInput.getCluster_name();
+            String experimentName = bulkJobManager.frameExperimentName(
+                    null, resolved, namespace, workload, container
+            );
 
             // Then
-            assertNull(clusterName,
-                    "Should return null when bulk payload cluster is null");
+            assertEquals("prometheus-metadata-cluster-default-test-app-deployment-app-container",
+                    experimentName,
+                    "Experiment name must fall back to the metadata cluster name when payload is null");
         }
 
         @Test
-        @DisplayName("Should return empty string when bulk payload cluster is empty")
-        void shouldReturnEmptyStringWhenBulkPayloadClusterIsEmpty() {
-            // Given
-            when(bulkInput.getCluster_name()).thenReturn("");
-
-            // When
-            String clusterName = bulkInput.getCluster_name();
-
-            // Then
-            assertEquals("", clusterName,
-                    "Should return empty string when bulk payload cluster is empty");
-        }
-
-        @Test
-        @DisplayName("Should handle cluster name with special characters")
-        void shouldHandleClusterNameWithSpecialCharacters() {
+        @DisplayName("Cluster name with dots and hyphens is preserved verbatim in experiment name")
+        void clusterNameWithSpecialCharactersPreservedInExperimentName() {
             // Given
             when(bulkInput.getCluster_name()).thenReturn("prod-cluster-01.us-east");
+            String resolved = resolveClusterName(bulkInput.getCluster_name(),
+                    cluster.getDataSourceClusterName());
 
             // When
-            String clusterName = bulkInput.getCluster_name();
+            String experimentName = bulkJobManager.frameExperimentName(
+                    null, resolved, namespace, workload, container
+            );
 
             // Then
-            assertEquals("prod-cluster-01.us-east", clusterName,
-                    "Should handle cluster name with special characters");
+            assertTrue(experimentName.contains("prod-cluster-01.us-east"),
+                    "Special characters in cluster name must be preserved in the experiment name");
+            assertEquals("prometheus-prod-cluster-01.us-east-default-test-app-deployment-app-container",
+                    experimentName);
         }
     }
 
@@ -155,29 +169,47 @@ class BulkJobManagerPassthroughTest {
     class ClusterNameUsageTests {
 
         @Test
-        @DisplayName("Should use cluster name from bulk payload in experiment name")
-        void shouldUseClusterNameFromBulkPayloadInExperimentName() {
-            // Given
+        @DisplayName("Payload cluster name overrides metadata cluster name in experiment name")
+        void payloadClusterNameOverridesMetadataCluster() {
+            // Given – a different cluster in the payload vs the metadata
             when(bulkInput.getCluster_name()).thenReturn("prod-cluster");
+            // Resolution matches BulkJobManager.getExperimentMap() logic
+            String resolved = bulkInput.getCluster_name() != null
+                    ? bulkInput.getCluster_name()
+                    : cluster.getDataSourceClusterName();
 
             // When
-            String clusterName = bulkInput.getCluster_name();
+            String experimentName = bulkJobManager.frameExperimentName(
+                    null, resolved, namespace, workload, container
+            );
 
             // Then
-            assertEquals("prod-cluster", clusterName, "Cluster name should match");
+            assertEquals("prometheus-prod-cluster-default-test-app-deployment-app-container",
+                    experimentName,
+                    "Payload cluster name must be reflected in the generated experiment name");
+            assertFalse(experimentName.contains("metadata-cluster"),
+                    "Metadata cluster name must not appear when payload overrides it");
         }
 
         @Test
-        @DisplayName("Should handle null cluster name (backward compatibility)")
-        void shouldHandleNullClusterName() {
-            // Given
+        @DisplayName("Null payload cluster name falls back to metadata cluster in experiment name")
+        void nullPayloadClusterFallsBackToMetadataCluster() {
+            // Given – null cluster name in payload
             when(bulkInput.getCluster_name()).thenReturn(null);
+            String resolved = bulkInput.getCluster_name() != null
+                    ? bulkInput.getCluster_name()
+                    : cluster.getDataSourceClusterName();   // "metadata-cluster"
 
             // When
-            String clusterName = bulkInput.getCluster_name();
+            String experimentName = bulkJobManager.frameExperimentName(
+                    null, resolved, namespace, workload, container
+            );
 
             // Then
-            assertNull(clusterName, "Cluster name should be null");
+            assertTrue(experimentName.contains("metadata-cluster"),
+                    "Metadata cluster name must be used in the experiment name when payload cluster is null");
+            assertEquals("prometheus-metadata-cluster-default-test-app-deployment-app-container",
+                    experimentName);
         }
     }
 
@@ -186,14 +218,19 @@ class BulkJobManagerPassthroughTest {
     class BackwardCompatibilityTests {
 
         @Test
-        @DisplayName("Should maintain existing behavior when cluster name not provided")
+        @DisplayName("Omitting cluster_name in payload still produces a valid experiment name from metadata")
         void shouldMaintainExistingBehaviorWhenClusterNameNotProvided() {
-            // Given - Old-style bulk input without cluster name
+            // Given – old-style bulk input without cluster_name; BulkJobManager falls back to the
+            // metadata cluster name (mirrors the getExperimentMap() resolution logic)
             when(bulkInput.getCluster_name()).thenReturn(null);
+            String resolved = bulkInput.getCluster_name() != null
+                    ? bulkInput.getCluster_name()
+                    : cluster.getDataSourceClusterName();   // "metadata-cluster"
 
-            // When
+            // When – the resolved name is passed through to frameExperimentName, exactly as
+            // BulkJobManager does
             String experimentName = bulkJobManager.frameExperimentName(
-                    null, cluster.getDataSourceClusterName(), namespace, workload, container
+                    null, resolved, namespace, workload, container
             );
 
             // Then
@@ -205,16 +242,25 @@ class BulkJobManagerPassthroughTest {
         }
 
         @Test
-        @DisplayName("Should not break existing experiments without cluster name")
-        void shouldNotBreakExistingExperimentsWithoutClusterName() {
-            // Given
-            when(bulkInput.getCluster_name()).thenReturn(null);
+        @DisplayName("Providing cluster_name in payload overrides metadata cluster in backward-compat scenario")
+        void clusterNamePayloadOverridesMetadataInBackwardCompatScenario() {
+            // Given – a new bulk payload that adds cluster_name alongside existing fields
+            when(bulkInput.getCluster_name()).thenReturn("override-cluster");
+            String resolved = bulkInput.getCluster_name() != null
+                    ? bulkInput.getCluster_name()
+                    : cluster.getDataSourceClusterName();
 
-            // When - Verify that BulkInput can be created without cluster name
-            boolean hasClusterName = bulkInput.getCluster_name() != null;
+            // When
+            String experimentName = bulkJobManager.frameExperimentName(
+                    null, resolved, namespace, workload, container
+            );
 
-            // Then
-            assertFalse(hasClusterName, "Should not have cluster name");
+            // Then – the override cluster name must win; metadata cluster must not appear
+            assertEquals("prometheus-override-cluster-default-test-app-deployment-app-container",
+                    experimentName,
+                    "Adding cluster_name to an existing payload must override the metadata cluster name");
+            assertFalse(experimentName.contains("metadata-cluster"),
+                    "Metadata cluster must not bleed into the name when payload provides an override");
         }
     }
 }
