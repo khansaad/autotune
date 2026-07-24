@@ -18,12 +18,15 @@ package com.autotune.database.table.lm;
 import com.autotune.analyzer.serviceObjects.BulkConfig;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -38,6 +41,8 @@ import java.util.Map;
 @Entity
 @Table(name = "kruize_optimiser_bulk_config")
 public class KruizeBulkConfigEntry {
+    private static final Logger LOGGER = LoggerFactory.getLogger(KruizeBulkConfigEntry.class);
+    private static final ObjectMapper objectMapper = new ObjectMapper();
 
     @Id
     @Column(name = "config_name", columnDefinition = "VARCHAR(255)")
