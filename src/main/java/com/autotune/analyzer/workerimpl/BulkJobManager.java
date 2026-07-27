@@ -15,6 +15,39 @@
  *******************************************************************************/
 package com.autotune.analyzer.workerimpl;
 
+import com.autotune.analyzer.adapters.DeviceDetailsAdapter;
+import com.autotune.analyzer.adapters.RecommendationItemAdapter;
+import com.autotune.analyzer.exceptions.KruizeResponse;
+import com.autotune.analyzer.kruizeObject.RecommendationSettings;
+import com.autotune.analyzer.metadataProfiles.MetadataProfile;
+import com.autotune.analyzer.metadataProfiles.MetadataProfileCollection;
+import com.autotune.analyzer.serviceObjects.*;
+import com.autotune.analyzer.utils.AnalyzerConstants;
+import com.autotune.analyzer.utils.GsonUTCDateAdapter;
+import com.autotune.common.data.dataSourceMetadata.*;
+import com.autotune.common.data.result.ContainerData;
+import com.autotune.common.data.system.info.device.DeviceDetails;
+import com.autotune.common.datasource.DataSourceInfo;
+import com.autotune.common.datasource.DataSourceManager;
+import com.autotune.common.k8sObjects.TrialSettings;
+import com.autotune.common.utils.CommonUtils;
+import com.autotune.database.dao.ExperimentDAOImpl;
+import com.autotune.operator.KruizeDeploymentInfo;
+import com.autotune.utils.GenericRestApiClient;
+import com.autotune.utils.KruizeConstants;
+import com.autotune.utils.MetricsConfig;
+import com.autotune.utils.Utils;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.google.gson.ExclusionStrategy;
+import com.google.gson.FieldAttributes;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import io.micrometer.core.instrument.Timer;
+import org.apache.http.conn.ConnectTimeoutException;
+import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.SocketTimeoutException;
@@ -25,16 +58,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -42,70 +66,11 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import org.apache.http.conn.ConnectTimeoutException;
-import org.json.JSONObject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.autotune.analyzer.adapters.DeviceDetailsAdapter;
-import com.autotune.analyzer.adapters.RecommendationItemAdapter;
-import com.autotune.analyzer.exceptions.KruizeResponse;
-import com.autotune.analyzer.kruizeObject.RecommendationSettings;
-import com.autotune.analyzer.metadataProfiles.MetadataProfile;
-import com.autotune.analyzer.metadataProfiles.MetadataProfileCollection;
-import com.autotune.analyzer.serviceObjects.BulkInput;
-import com.autotune.analyzer.serviceObjects.BulkJobStatus;
-import com.autotune.analyzer.serviceObjects.ContainerAPIObject;
-import com.autotune.analyzer.serviceObjects.CreateExperimentAPIObject;
-import com.autotune.analyzer.serviceObjects.KubernetesAPIObject;
 import static com.autotune.analyzer.services.BulkService.filterJson;
-import com.autotune.analyzer.utils.AnalyzerConstants;
-import com.autotune.analyzer.utils.GsonUTCDateAdapter;
-import com.autotune.common.data.dataSourceMetadata.DataSource;
-import com.autotune.common.data.dataSourceMetadata.DataSourceCluster;
-import com.autotune.common.data.dataSourceMetadata.DataSourceContainer;
-import com.autotune.common.data.dataSourceMetadata.DataSourceMetadataInfo;
-import com.autotune.common.data.dataSourceMetadata.DataSourceNamespace;
-import com.autotune.common.data.dataSourceMetadata.DataSourceWorkload;
-import com.autotune.common.data.result.ContainerData;
-import com.autotune.common.data.system.info.device.DeviceDetails;
-import com.autotune.common.datasource.DataSourceInfo;
-import com.autotune.common.datasource.DataSourceManager;
-import com.autotune.common.k8sObjects.TrialSettings;
-import com.autotune.common.utils.CommonUtils;
-import com.autotune.database.dao.ExperimentDAOImpl;
-import com.autotune.operator.KruizeDeploymentInfo;
 import static com.autotune.operator.KruizeDeploymentInfo.bulk_thread_pool_size;
 import static com.autotune.operator.KruizeDeploymentInfo.job_filter_to_db;
-import com.autotune.utils.GenericRestApiClient;
-import com.autotune.utils.KruizeConstants;
-import static com.autotune.utils.KruizeConstants.KRUIZE_BULK_API.COMPLETED;
-import static com.autotune.utils.KruizeConstants.KRUIZE_BULK_API.CREATE_EXPERIMENT_CONFIG_BEAN;
-import static com.autotune.utils.KruizeConstants.KRUIZE_BULK_API.END_TIME;
-import static com.autotune.utils.KruizeConstants.KRUIZE_BULK_API.FAILED;
-import static com.autotune.utils.KruizeConstants.KRUIZE_BULK_API.JOB_ID;
-import com.autotune.utils.KruizeConstants.KRUIZE_BULK_API.NotificationConstants;
-import static com.autotune.utils.KruizeConstants.KRUIZE_BULK_API.NotificationConstants.DATASOURCE_CONNECT_TIMEOUT_INFO;
-import static com.autotune.utils.KruizeConstants.KRUIZE_BULK_API.NotificationConstants.DATASOURCE_DOWN_INFO;
-import static com.autotune.utils.KruizeConstants.KRUIZE_BULK_API.NotificationConstants.DATASOURCE_GATEWAY_TIMEOUT_INFO;
-import static com.autotune.utils.KruizeConstants.KRUIZE_BULK_API.NotificationConstants.DATASOURCE_NOT_REG_INFO;
-import static com.autotune.utils.KruizeConstants.KRUIZE_BULK_API.NotificationConstants.EXPERIMENT_FAILED;
-import static com.autotune.utils.KruizeConstants.KRUIZE_BULK_API.NotificationConstants.LIMIT_INFO;
-import static com.autotune.utils.KruizeConstants.KRUIZE_BULK_API.NotificationConstants.METADATA_PROFILE_NOT_FOUND;
-import static com.autotune.utils.KruizeConstants.KRUIZE_BULK_API.NotificationConstants.LABEL_FILTER_NO_MATCH_INFO;
-import static com.autotune.utils.KruizeConstants.KRUIZE_BULK_API.NotificationConstants.NOTHING_INFO;
-import com.autotune.utils.KruizeConstants.KRUIZE_BULK_API.NotificationConstants.WebHookStatus;
-import static com.autotune.utils.KruizeConstants.KRUIZE_BULK_API.START_TIME;
-import static com.autotune.utils.KruizeConstants.KRUIZE_BULK_API.STEPS;
-import com.autotune.utils.MetricsConfig;
-import com.autotune.utils.Utils;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.google.gson.ExclusionStrategy;
-import com.google.gson.FieldAttributes;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-
-import io.micrometer.core.instrument.Timer;
+import static com.autotune.utils.KruizeConstants.KRUIZE_BULK_API.*;
+import static com.autotune.utils.KruizeConstants.KRUIZE_BULK_API.NotificationConstants.*;
 
 
 /**
@@ -192,7 +157,7 @@ public class BulkJobManager implements Runnable {
                     labelString = getLabelsForExperimentName(this.bulkInput.getFilter());
                     includeResourcesMap = buildResourceFilters(this.bulkInput.getFilter().getInclude());
                     excludeResourcesMap = buildResourceFilters(this.bulkInput.getFilter().getExclude());
-                    
+
                     LOGGER.info("Filter configuration for job {}: includeResourcesMap={}, excludeResourcesMap={}",
                                jobID, includeResourcesMap, excludeResourcesMap);
                 }
@@ -557,6 +522,9 @@ public class BulkJobManager implements Runnable {
             for (DataSource ds : dataSourceCollection) {
                 HashMap<String, DataSourceCluster> clusterHashMap = ds.getClusters();
                 for (DataSourceCluster dsc : clusterHashMap.values()) {
+                    String clusterName = this.bulkInput.getCluster_name() != null
+                            ? this.bulkInput.getCluster_name()
+                            : dsc.getDataSourceClusterName();
                     HashMap<String, DataSourceNamespace> namespaceHashMap = dsc.getNamespaces();
                     for (DataSourceNamespace namespace : namespaceHashMap.values()) {
                         HashMap<String, DataSourceWorkload> dataSourceWorkloadHashMap = namespace.getWorkloads();
@@ -566,13 +534,13 @@ public class BulkJobManager implements Runnable {
                                 if (dataSourceContainerHashMap != null) {
                                     for (DataSourceContainer dc : dataSourceContainerHashMap.values()) {
                                         // Experiment name - dynamically constructed
-                                        String experiment_name = frameExperimentName(labelString, dsc, namespace, dsw, dc);
+                                        String experiment_name = frameExperimentName(labelString, clusterName, namespace, dsw, dc);
                                         LOGGER.info("Creating experiment: {} for namespace={}, workload={}, workload_type={}, container={}",
                                                    experiment_name, namespace.getNamespace(), dsw.getWorkloadName(),
                                                    dsw.getWorkloadType(), dc.getContainerName());
                                         // create JSON to be passed in the createExperimentAPI
                                         List<CreateExperimentAPIObject> createExperimentAPIObjectList = new ArrayList<>();
-                                        CreateExperimentAPIObject apiObject = prepareCreateExperimentJSONInput(dc, dsc, dsw, namespace,
+                                        CreateExperimentAPIObject apiObject = prepareCreateExperimentJSONInput(dc, clusterName, dsw, namespace,
                                                 experiment_name, createExperimentAPIObjectList);
                                         createExperimentAPIObjectMap.put(experiment_name, apiObject);
                                     }
@@ -594,12 +562,14 @@ public class BulkJobManager implements Runnable {
     private String getLabelsForExperimentName(BulkInput.FilterWrapper filter) {
         String uniqueKey = null;
         try {
+            // Process labels in the 'include' section
             if (filter.getInclude() != null) {
+                // Initialize StringBuilder for uniqueKey
                 StringBuilder includeLabelsBuilder = new StringBuilder();
                 Map<String, Object> includeLabels = filter.getInclude().getLabels();
                 if (includeLabels != null && !includeLabels.isEmpty()) {
                     LOGGER.info("Processing {} labels for experiment name", includeLabels.size());
-                    
+
                     includeLabels.forEach((key, value) -> {
                         // Use original key name without normalization
                         // Handle both single values and arrays
@@ -616,11 +586,11 @@ public class BulkJobManager implements Runnable {
                             includeLabelsBuilder.append(key).append("=").append("\"").append(escapedValue).append("\"").append(",");
                         }
                     });
-                    
+
                     if (includeLabelsBuilder.length() > 0) {
                         includeLabelsBuilder.setLength(includeLabelsBuilder.length() - 1);
                     }
-                    
+
                     uniqueKey = includeLabelsBuilder.toString();
                     LOGGER.info("Labels for experiment name: {}", uniqueKey);
                 }
@@ -642,17 +612,17 @@ public class BulkJobManager implements Runnable {
                     filter.getWorkload().stream().map(String::trim).collect(Collectors.joining("|")) : "";
             String containerRegex = filter.getContainers() != null ?
                     filter.getContainers().stream().map(String::trim).collect(Collectors.joining("|")) : "";
-            
+
             resourceFilters.put("namespaceRegex", namespaceRegex);
             resourceFilters.put("workloadRegex", workloadRegex);
             resourceFilters.put("containerRegex", containerRegex);
-            
+
             LOGGER.debug("Built resource regex filters - namespace: '{}', workload: '{}', container: '{}'",
                         namespaceRegex, workloadRegex, containerRegex);
-            
+
             Map<String, String> labelFilters = buildLabelFilters(filter.getLabels());
             resourceFilters.putAll(labelFilters);
-            
+
             LOGGER.debug("Combined resource filters: {}", resourceFilters);
         } else {
             LOGGER.debug("No filter provided, returning empty resource filters");
@@ -672,9 +642,9 @@ public class BulkJobManager implements Runnable {
             LOGGER.debug("Label value is null, returning empty string");
             return "";
         }
-        
+
         LOGGER.debug("Escaping label value - Original: [{}]", value);
-        
+
         // Escape backslashes first (must be done before escaping quotes)
         String escaped = value.replace("\\", "\\\\");
         // Escape double quotes
@@ -685,13 +655,13 @@ public class BulkJobManager implements Runnable {
         escaped = escaped.replace("\r", "\\r");
         // Escape tabs
         escaped = escaped.replace("\t", "\\t");
-        
+
         if (!value.equals(escaped)) {
             LOGGER.info("Label value escaped - Original: [{}], Escaped: [{}]", value, escaped);
         } else {
             LOGGER.debug("Label value requires no escaping: [{}]", value);
         }
-        
+
         return escaped;
     }
 
@@ -703,7 +673,7 @@ public class BulkJobManager implements Runnable {
         }
 
         LOGGER.info("Building label filters from {} label(s)", labels.size());
-        
+
         // For multiple labels, we need OR logic (match if ANY label matches)
         // Build separate queries for each label and combine with 'or' operator
         List<String> podLabelQueries = new ArrayList<>();
@@ -711,7 +681,7 @@ public class BulkJobManager implements Runnable {
 
         labels.forEach((key, value) -> {
             LOGGER.info("Processing label key: '{}' (original), value: '{}'", key, value);
-            
+
             // Handle both single string values and arrays of values
             List<String> values = new ArrayList<>();
             if (value instanceof List) {
@@ -721,13 +691,13 @@ public class BulkJobManager implements Runnable {
                 // Single value: {"app": "kindnet"}
                 values.add(value.toString());
             }
-            
+
             // kube-state-metrics normalizes label names by replacing special chars with underscores
             // e.g., "pod-template-hash" becomes "label_pod_template_hash"
             // e.g., "app.kubernetes.io/component" becomes "label_app_kubernetes_io_component"
             String normalizedKey = key.replaceAll("[^a-zA-Z0-9_]", "_");
             LOGGER.info("Normalized key for PromQL: '{}'", normalizedKey);
-            
+
             // Create a matcher for each value
             for (String val : values) {
                 String escapedValue = escapePromQLLabelValue(val);
@@ -780,14 +750,14 @@ public class BulkJobManager implements Runnable {
 
     /**
      * @param dc                         DataSourceContainer object to get the container details
-     * @param dsc                        DataSourceCluster object to get the cluster details
+     * @param clusterName                resolved cluster name (user override or data source cluster name)
      * @param dsw                        DataSourceWorkload object to get the workload details
      * @param namespace                  DataSourceNamespace object to get the namespace details
      * @param createExperimentAPIObjects
      * @return Json string to be sent to the createExperimentAPI for experiment creation
      * @throws JsonProcessingException
      */
-    private CreateExperimentAPIObject prepareCreateExperimentJSONInput(DataSourceContainer dc, DataSourceCluster dsc, DataSourceWorkload dsw,
+    private CreateExperimentAPIObject prepareCreateExperimentJSONInput(DataSourceContainer dc, String clusterName, DataSourceWorkload dsw,
                                                                        DataSourceNamespace namespace, String experiment_name, List<CreateExperimentAPIObject> createExperimentAPIObjects) throws IOException {
 
         CreateExperimentAPIObject createExperimentAPIObject = new CreateExperimentAPIObject();
@@ -796,7 +766,7 @@ public class BulkJobManager implements Runnable {
         createExperimentAPIObject.setApiVersion(CREATE_EXPERIMENT_CONFIG_BEAN.getVersion());
         createExperimentAPIObject.setExperimentName(experiment_name);
         createExperimentAPIObject.setDatasource(this.bulkInput.getDatasource());
-        createExperimentAPIObject.setClusterName(dsc.getDataSourceClusterName());
+        createExperimentAPIObject.setClusterName(clusterName);
         createExperimentAPIObject.setPerformanceProfile(CREATE_EXPERIMENT_CONFIG_BEAN.getPerformanceProfile());
         createExperimentAPIObject.setMetadataProfile(CREATE_EXPERIMENT_CONFIG_BEAN.getMetadataProfile());
         List<KubernetesAPIObject> kubernetesAPIObjectList = new ArrayList<>();
@@ -809,8 +779,11 @@ public class BulkJobManager implements Runnable {
         kubernetesAPIObject.setNamespace(namespace.getNamespace());
         kubernetesAPIObjectList.add(kubernetesAPIObject);
         createExperimentAPIObject.setKubernetesObjects(kubernetesAPIObjectList);
+
+        // Create recommendation settings with threshold
         RecommendationSettings rs = new RecommendationSettings();
         rs.setThreshold(CREATE_EXPERIMENT_CONFIG_BEAN.getThreshold());
+
         createExperimentAPIObject.setRecommendationSettings(rs);
         TrialSettings trialSettings = new TrialSettings();
         trialSettings.setMeasurement_durationMinutes(CREATE_EXPERIMENT_CONFIG_BEAN.getMeasurementDurationStr());
@@ -827,16 +800,15 @@ public class BulkJobManager implements Runnable {
 
     /**
      * @param labelString
-     * @param dataSourceCluster
+     * @param clusterName
      * @param dataSourceNamespace
      * @param dataSourceWorkload
      * @param dataSourceContainer
      * @return
      */
-    public String frameExperimentName(String labelString, DataSourceCluster dataSourceCluster, DataSourceNamespace dataSourceNamespace, DataSourceWorkload dataSourceWorkload, DataSourceContainer dataSourceContainer) {
+    public String frameExperimentName(String labelString, String clusterName, DataSourceNamespace dataSourceNamespace, DataSourceWorkload dataSourceWorkload, DataSourceContainer dataSourceContainer) {
 
         String datasource = this.bulkInput.getDatasource();
-        String clusterName = dataSourceCluster.getDataSourceClusterName();
         String namespace = dataSourceNamespace.getNamespace();
         String workloadName = dataSourceWorkload.getWorkloadName();
         String workloadType = dataSourceWorkload.getWorkloadType();

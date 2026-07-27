@@ -79,6 +79,7 @@ import static com.autotune.utils.KruizeConstants.KRUIZE_BULK_API.JOB_ID;
  */
 public class DBHelpers {
     private static final Logger LOGGER = LoggerFactory.getLogger(DBHelpers.class);
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
 
     private DBHelpers() {
@@ -1202,12 +1203,15 @@ public class DBHelpers {
                                 LOGGER.error("GSON failed to convert the DB Json object in convertKruizeDataSourceToDataSourceObject");
                             }
                         }
+                        // Get cluster list from database entry
+                        List<String> clusterList = kruizeDataSource.getClusterList();
+                        
                         if (kruizeDataSource.getServiceName().isEmpty() && null != kruizeDataSource.getUrl()) {
                             dataSourceInfo = new DataSourceInfo(kruizeDataSource.getName(), kruizeDataSource
-                                    .getProvider(), null, null, new URL(kruizeDataSource.getUrl()), authConfig);
+                                    .getProvider(), null, null, new URL(kruizeDataSource.getUrl()), authConfig, clusterList);
                         } else {
                             dataSourceInfo = new DataSourceInfo(kruizeDataSource.getName(), kruizeDataSource
-                                    .getProvider(), kruizeDataSource.getServiceName(), kruizeDataSource.getNamespace(), null, authConfig);
+                                    .getProvider(), kruizeDataSource.getServiceName(), kruizeDataSource.getNamespace(), null, authConfig, clusterList);
                         }
                         dataSourceInfoList.add(dataSourceInfo);
                     } catch (Exception e) {
@@ -1238,7 +1242,15 @@ public class DBHelpers {
                     kruizeDataSource.setProvider(dataSourceInfo.getProvider());
                     kruizeDataSource.setServiceName(dataSourceInfo.getServiceName());
                     kruizeDataSource.setNamespace(dataSourceInfo.getNamespace());
-                    kruizeDataSource.setUrl(dataSourceInfo.getUrl().toString());
+                    // Only set URL if it's not null (service-based datasources have null URL)
+                    if (dataSourceInfo.getUrl() != null) {
+                        kruizeDataSource.setUrl(dataSourceInfo.getUrl().toString());
+                    }
+                    // Convert List<String> clusters to JsonNode and store as JSONB
+                    List<String> clusterList = dataSourceInfo.getClusters();
+                    if (clusterList != null && !clusterList.isEmpty()) {
+                        kruizeDataSource.setClusters(OBJECT_MAPPER.valueToTree(clusterList));
+                    }
                 } catch (Exception e) {
                     kruizeDataSource = null;
                     LOGGER.error("Error while converting DataSource Object to KruizeDataSource table due to {}", e.getMessage());
