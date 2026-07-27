@@ -15,6 +15,8 @@
  *******************************************************************************/
 package com.autotune.common.bulk;
 
+import com.autotune.analyzer.kruizeObject.ModelSettings;
+import com.autotune.analyzer.kruizeObject.TermSettings;
 import com.autotune.analyzer.serviceObjects.BulkInput;
 import com.autotune.common.data.ValidationOutputData;
 import com.autotune.common.datasource.DataSourceInfo;
@@ -48,8 +50,15 @@ public class BulkServiceValidation {
     private static final Logger LOGGER = LoggerFactory.getLogger(BulkServiceValidation.class);
 
     // Valid model and term names (case-insensitive)
-    private static final List<String> VALID_MODELS = Arrays.asList("performance", "cost");
-    private static final List<String> VALID_TERMS = Arrays.asList("short", "medium", "long");
+    private static final List<String> VALID_MODELS = Arrays.asList(
+            KruizeConstants.JSONKeys.PERFORMANCE,
+            KruizeConstants.JSONKeys.COST
+    );
+    private static final List<String> VALID_TERMS = Arrays.asList(
+            KruizeConstants.JSONKeys.SHORT,
+            KruizeConstants.JSONKeys.MEDIUM,
+            KruizeConstants.JSONKeys.LONG
+    );
 
     /**
      * Validates the bulk request payload and returns the corresponding validation output.
@@ -238,7 +247,7 @@ public class BulkServiceValidation {
      * @param modelSettings the model settings to validate (can be null)
      * @return an error message if validation fails; otherwise an empty string
      */
-    public static String validateModelSettings(com.autotune.analyzer.kruizeObject.ModelSettings modelSettings) {
+    public static String validateModelSettings(ModelSettings modelSettings) {
         if (modelSettings == null) {
             return ""; // Optional field
         }
@@ -264,7 +273,7 @@ public class BulkServiceValidation {
      * @param termSettings the term settings to validate (can be null)
      * @return an error message if validation fails; otherwise an empty string
      */
-    public static String validateTermSettings(com.autotune.analyzer.kruizeObject.TermSettings termSettings) {
+    public static String validateTermSettings(TermSettings termSettings) {
         if (termSettings == null) {
             return ""; // Optional field
         }

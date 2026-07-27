@@ -462,6 +462,8 @@ def test_bulk_api_model_settings_validation(cluster_type, model_settings, omit_m
         else:
             # Valid model_settings should create a job
             assert "job_id" in response.json(), "Expected job_id in response for valid model_settings"
+
+
 @pytest.mark.test_bulk_api_ros
 @pytest.mark.parametrize("term_settings, omit_term_settings, expected_status, expected_error", [
     ({"terms": ["short"]}, False, SUCCESS_200_STATUS_CODE, None),  # Valid single term
