@@ -887,7 +887,8 @@ public class RecommendationEngine implements RecommendationEngineService {
 
         // Check for thresholds
         if (isRecommendedCPURequestAvailable) {
-            if (isCurrentCPURequestAvailable && currentCpuRequestValue > 0.0 && null != generatedCpuRequest) {
+            if (isCurrentCPURequestAvailable && currentCpuRequestValue > 0.0 && null != generatedCpuRequest
+                    && generatedCpuRequest > 0.0) {
                 double diffCpuRequestPercentage = CommonUtils.getPercentage(generatedCpuRequest, currentCpuRequestValue);
                 // Check if variation percentage is negative
                 if (diffCpuRequestPercentage < 0.0) {
@@ -924,7 +925,11 @@ public class RecommendationEngine implements RecommendationEngineService {
                     RecommendationNotification recommendationNotification = new RecommendationNotification(RecommendationConstants.RecommendationNotification.NOTICE_CPU_REQUESTS_OPTIMISED);
                     engineNotifications.add(recommendationNotification);
                 } else {
-                    // Threshold exceeded - add provisioning status notification
+                    // Threshold exceeded: generatedCpuRequest and currentCpuRequestValue differ
+                    // by more than cpuThreshold percent.  The generatedCpuRequest > 0 guard above
+                    // ensures we never reach here with a degenerate zero recommendation.
+                    // generatedCpuRequest == currentCpuRequestValue → diff == 0 → always optimised,
+                    // so that case cannot land here.
                     if (generatedCpuRequest > currentCpuRequestValue) {
                         // Recommended value is higher than current - under-provisioned
                         RecommendationNotification recommendationNotification = new RecommendationNotification(RecommendationConstants.RecommendationNotification.NOTICE_CPU_REQUESTS_UNDER_PROVISIONED);
@@ -939,7 +944,8 @@ public class RecommendationEngine implements RecommendationEngineService {
         }
 
         if (isRecommendedCPULimitAvailable) {
-            if (isCurrentCPULimitAvailable && currentCpuLimitValue > 0.0 && null != generatedCpuLimit) {
+            if (isCurrentCPULimitAvailable && currentCpuLimitValue > 0.0 && null != generatedCpuLimit
+                    && generatedCpuLimit > 0.0) {
                 double diffCPULimitPercentage = CommonUtils.getPercentage(generatedCpuLimit, currentCpuLimitValue);
                 // Check if variation percentage is negative
                 if (diffCPULimitPercentage < 0.0) {
@@ -975,7 +981,11 @@ public class RecommendationEngine implements RecommendationEngineService {
                     RecommendationNotification recommendationNotification = new RecommendationNotification(RecommendationConstants.RecommendationNotification.NOTICE_CPU_LIMITS_OPTIMISED);
                     engineNotifications.add(recommendationNotification);
                 } else {
-                    // Threshold exceeded - add provisioning status notification
+                    // Threshold exceeded: generatedCpuLimit and currentCpuLimitValue differ
+                    // by more than cpuThreshold percent.  The generatedCpuLimit > 0 guard above
+                    // ensures we never reach here with a degenerate zero recommendation.
+                    // generatedCpuLimit == currentCpuLimitValue → diff == 0 → always optimised,
+                    // so that case cannot land here.
                     if (generatedCpuLimit > currentCpuLimitValue) {
                         // Recommended value is higher than current - under-provisioned
                         RecommendationNotification recommendationNotification = new RecommendationNotification(RecommendationConstants.RecommendationNotification.NOTICE_CPU_LIMITS_UNDER_PROVISIONED);

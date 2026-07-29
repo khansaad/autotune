@@ -430,16 +430,24 @@ def test_bulk_api_cluster_name_validation(cluster_type, cluster_name, expected_s
     ({"models": ["invalid"]}, ERROR_STATUS_CODE, "Invalid model name"),  # Invalid model
     ({"models": ["performance", "invalid"]}, ERROR_STATUS_CODE, "Invalid model name"),  # Mixed valid/invalid
     ({}, ERROR_STATUS_CODE, "model_settings.models cannot be null or empty"),  # Missing models field
+    ({"models": ["performance", " "]}, ERROR_STATUS_CODE, "Invalid model name"),  # Whitespace-only model name
+    (None, SUCCESS_200_STATUS_CODE, None),  # model_settings omitted entirely - defaults apply
 ])
 def test_bulk_api_model_settings_validation(cluster_type, model_settings, expected_status, expected_error, caplog):
     """
     Validates model_settings field validation in Bulk API.
     Tests valid models, invalid models, and edge cases.
+
+    When model_settings is None the key is omitted from the request payload entirely,
+    simulating a client that does not send the field at all.  The backend is expected
+    to apply its default model selection and return a successful job_id.
     """
     form_kruize_url(cluster_type)
     
     payload = base_payload()
-    payload["model_settings"] = model_settings
+    # Only include model_settings when explicitly provided; None means "omit the field"
+    if model_settings is not None:
+        payload["model_settings"] = model_settings
     payload["time_range"]["start"] = "2025-01-01T00:00:00Z"
     payload["time_range"]["end"] = "2025-01-02T00:00:00Z"
     
@@ -472,16 +480,24 @@ def test_bulk_api_model_settings_validation(cluster_type, model_settings, expect
     ({"terms": ["invalid"]}, ERROR_STATUS_CODE, "Invalid term name"),  # Invalid term
     ({"terms": ["short", "invalid"]}, ERROR_STATUS_CODE, "Invalid term name"),  # Mixed valid/invalid
     ({}, ERROR_STATUS_CODE, "term_settings.terms cannot be null or empty"),  # Missing terms field
+    ({"terms": ["short", " "]}, ERROR_STATUS_CODE, "Invalid term name"),  # Whitespace-only term name
+    (None, SUCCESS_200_STATUS_CODE, None),  # term_settings omitted entirely - defaults apply
 ])
 def test_bulk_api_term_settings_validation(cluster_type, term_settings, expected_status, expected_error, caplog):
     """
     Validates term_settings field validation in Bulk API.
     Tests valid terms, invalid terms, and edge cases.
+
+    When term_settings is None the key is omitted from the request payload entirely,
+    simulating a client that does not send the field at all.  The backend is expected
+    to apply its default term selection and return a successful job_id.
     """
     form_kruize_url(cluster_type)
     
     payload = base_payload()
-    payload["term_settings"] = term_settings
+    # Only include term_settings when explicitly provided; None means "omit the field"
+    if term_settings is not None:
+        payload["term_settings"] = term_settings
     payload["time_range"]["start"] = "2025-01-01T00:00:00Z"
     payload["time_range"]["end"] = "2025-01-02T00:00:00Z"
     
