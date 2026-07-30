@@ -297,7 +297,7 @@ function check_jmeter_results() {
 
 function java21_install() {
 	JAVA_VERSION=21.0.11_10
-	JAVA_URL="https://github.com/adoptium/temurin21-binaries/releases/download/${JAVA_VERSION}/OpenJDK21U-jdk_x64_linux_hotspot_${JAVA_VERSION}.tar.gz"
+	JAVA_URL="https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.11+10/OpenJDK21U-jdk_x64_linux_hotspot_${JAVA_VERSION}.tar.gz"
 	JAVA_INSTALL_DIR=/tmp/temurin21
 
 	# Check if Temurin 21 is already installed at the expected location
