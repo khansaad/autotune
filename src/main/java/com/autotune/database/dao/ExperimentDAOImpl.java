@@ -2169,14 +2169,13 @@ public class ExperimentDAOImpl implements ExperimentDAO {
                 tx.commit();
                 validationOutputData.setSuccess(true);
             } catch (HibernateException e) {
-                LOGGER.error("Not able to update bulk config due to {}", e.getMessage());
+                LOGGER.error("Not able to update bulk config due to {}", e.getMessage(), e);
                 if (tx != null) tx.rollback();
-                e.printStackTrace();
                 validationOutputData.setSuccess(false);
                 validationOutputData.setMessage(e.getMessage());
             }
         } catch (Exception e) {
-            LOGGER.error("Not able to update bulk config due to {}", e.getMessage());
+            LOGGER.error("Not able to update bulk config due to {}", e.getMessage(), e);
             validationOutputData.setMessage(e.getMessage());
         }
         return validationOutputData;
@@ -2209,14 +2208,13 @@ public class ExperimentDAOImpl implements ExperimentDAO {
                     validationOutputData.setErrorCode(HttpServletResponse.SC_NOT_FOUND);
                 }
             } catch (HibernateException e) {
-                LOGGER.error("Not able to delete bulk config due to {}", e.getMessage());
+                LOGGER.error("Not able to delete bulk config due to {}", e.getMessage(), e);
                 if (tx != null) tx.rollback();
-                e.printStackTrace();
                 validationOutputData.setSuccess(false);
                 validationOutputData.setMessage(e.getMessage());
             }
         } catch (Exception e) {
-            LOGGER.error("Not able to delete bulk config due to {}", e.getMessage());
+            LOGGER.error("Not able to delete bulk config due to {}", e.getMessage(), e);
             validationOutputData.setMessage(e.getMessage());
         }
         return validationOutputData;
