@@ -1000,7 +1000,8 @@ public class RecommendationEngine implements RecommendationEngineService {
         }
 
         if (isRecommendedMemoryRequestAvailable) {
-            if (isCurrentMemoryRequestAvailable && currentMemRequestValue > 0.0 && null != generatedMemRequest) {
+            if (isCurrentMemoryRequestAvailable && currentMemRequestValue > 0.0 && null != generatedMemRequest
+                    && generatedMemRequest > 0.0) {
                 double diffMemRequestPercentage = CommonUtils.getPercentage(generatedMemRequest, currentMemRequestValue);
                 // Check if variation percentage is negative
                 if (diffMemRequestPercentage < 0.0) {
@@ -1051,7 +1052,8 @@ public class RecommendationEngine implements RecommendationEngineService {
         }
 
         if (isRecommendedMemoryLimitAvailable) {
-            if (isCurrentMemoryLimitAvailable && currentMemLimitValue > 0.0 && null != generatedMemLimit) {
+            if (isCurrentMemoryLimitAvailable && currentMemLimitValue > 0.0 && null != generatedMemLimit
+                    && generatedMemLimit > 0.0) {
                 double diffMemLimitPercentage = CommonUtils.getPercentage(generatedMemLimit, currentMemLimitValue);
                 // Check if variation percentage is negative
                 if (diffMemLimitPercentage < 0.0) {
