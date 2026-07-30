@@ -42,8 +42,8 @@ import com.autotune.utils.KruizeConstants;
 import com.autotune.utils.MetricsConfig;
 import com.autotune.utils.ServerContext;
 import com.autotune.utils.filter.KruizeCORSFilter;
-import io.prometheus.client.exporter.MetricsServlet;
-import io.prometheus.client.hotspot.DefaultExports;
+import io.prometheus.metrics.exporter.servlet.javax.PrometheusMetricsServlet;
+import io.prometheus.metrics.instrumentation.jvm.JvmMetrics;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.core.config.Configurator;
 import org.eclipse.jetty.server.Server;
@@ -299,11 +299,10 @@ public class Autotune {
     private static void addAutotuneServlets(ServletContextHandler context) {
         context.addServlet(HealthService.class, ServerContext.HEALTH_SERVICE);
         // Start the Prometheus end point (/metrics) for Autotune
+        JvmMetrics.builder().register();
         context.addServlet(
-                new ServletHolder(
-                    new MetricsServlet(MetricsConfig.meterRegistry().getPrometheusRegistry())
-                ), ServerContext.METRICS_SERVICE);
-        DefaultExports.initialize();
+                new ServletHolder(new PrometheusMetricsServlet()),
+                ServerContext.METRICS_SERVICE);
     }
 
     private static void disableServerLogging() {
