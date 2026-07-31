@@ -2076,14 +2076,13 @@ public class ExperimentDAOImpl implements ExperimentDAO {
                 validationOutputData.setMessage("Bulk config with name " + kruizeBulkConfigEntry.getConfigName() + " already exists");
                 validationOutputData.setErrorCode(HttpServletResponse.SC_CONFLICT);
             } catch (HibernateException e) {
-                LOGGER.error("Not able to save bulk config due to {}", e.getMessage());
+                LOGGER.error("Not able to save bulk config due to {}", e.getMessage(), e);
                 if (tx != null) tx.rollback();
-                e.printStackTrace();
                 validationOutputData.setSuccess(false);
                 validationOutputData.setMessage(e.getMessage());
             }
         } catch (Exception e) {
-            LOGGER.error("Not able to save bulk config due to {}", e.getMessage());
+            LOGGER.error("Not able to save bulk config due to {}", e.getMessage(), e);
             validationOutputData.setMessage(e.getMessage());
         }
         return validationOutputData;
