@@ -127,6 +127,17 @@ public class DBConstants {
         public static final String DELETE_FROM_PERFORMANCE_PROFILE_BY_NAME = "DELETE FROM KruizePerformanceProfileEntry kpp WHERE kpp.name = :perfProfileName";
     }
 
+    public static final class BULK_CONFIG_MESSAGES {
+        public static final String BULK_CONFIG_ALREADY_EXISTS = "Bulk config with name %s already exists";
+        public static final String ERROR_SAVING_BULK_CONFIG = "Not able to save bulk config due to %s";
+        public static final String ERROR_LOADING_BULK_CONFIG = "Error loading bulk config: %s";
+        public static final String ERROR_LOADING_BULK_CONFIGS = "Error loading bulk configs: %s";
+        public static final String ERROR_LOADING_ENABLED_BULK_CONFIGS = "Error loading enabled bulk configs: %s";
+        public static final String ERROR_UPDATING_BULK_CONFIG = "Not able to update bulk config due to %s";
+        public static final String ERROR_DELETING_BULK_CONFIG = "Not able to delete bulk config due to %s";
+        public static final String BULK_CONFIG_NOT_FOUND = "Bulk config not found: %s";
+    }
+
     public static final class TABLE_NAMES {
         public static final String KRUIZE_EXPERIMENTS = "kruize_experiments";
         public static final String KRUIZE_RESULTS = "kruize_results";
