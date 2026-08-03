@@ -18,6 +18,7 @@ package com.autotune.common.bulk;
 import com.autotune.analyzer.kruizeObject.ModelSettings;
 import com.autotune.analyzer.kruizeObject.TermSettings;
 import com.autotune.analyzer.serviceObjects.BulkInput;
+import com.autotune.analyzer.utils.AnalyzerErrorConstants;
 import com.autotune.common.data.ValidationOutputData;
 import com.autotune.common.datasource.DataSourceInfo;
 import com.autotune.common.datasource.DataSourceOperatorImpl;
@@ -29,8 +30,9 @@ import org.slf4j.LoggerFactory;
 
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
-import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
+import java.util.Arrays;
 
 /**
  * Utility class that performs validation for bulk service requests.
@@ -48,6 +50,12 @@ import java.util.List;
 public class BulkServiceValidation {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(BulkServiceValidation.class);
+
+    // Cluster name validation constants
+    private static final int MAX_CLUSTER_NAME_LENGTH = 253;
+
+    // Valid experiment types supported by the bulk engine
+    private static final Set<String> VALID_EXPERIMENT_TYPES = Set.of(KruizeConstants.JSONKeys.CONTAINER, KruizeConstants.JSONKeys.NAMESPACE);
 
     // Valid model and term names (case-insensitive)
     private static final List<String> VALID_MODELS = Arrays.asList(
@@ -100,6 +108,10 @@ public class BulkServiceValidation {
 
         // Validate term_settings if provided
         validationOutputData = buildErrorOutput(validateTermSettings(payload.getTerm_settings()), jobID);
+        if (validationOutputData != null) return validationOutputData;
+
+        // Validate experiment_types if provided
+        validationOutputData = buildErrorOutput(validateExperimentTypes(payload.getExperiment_types()), jobID);
         if (validationOutputData != null) return validationOutputData;
 
         if (payload.getDatasource() != null) {
@@ -289,6 +301,44 @@ public class BulkServiceValidation {
                 return "Invalid term name: " + term + ". Valid terms are: " + VALID_TERMS;
             }
         }
+        return "";
+    }
+
+    /**
+     * Validates the experiment_types field if provided.
+     * Checks for:
+     * <ul>
+     *     <li>Exactly one entry — multiple types are not supported; the bulk engine
+     *         creates experiments of a single type per job</li>
+     *     <li>Non-null, non-empty entry value</li>
+     *     <li>Valid type name (container, namespace)</li>
+     * </ul>
+     *
+     * @param experimentTypes the list of experiment types to validate (can be null)
+     * @return an error message if validation fails; otherwise an empty string
+     */
+    public static String validateExperimentTypes(List<String> experimentTypes) {
+        if (experimentTypes == null || experimentTypes.isEmpty()) {
+            return ""; // null/empty is valid; defaults to container experiments
+        }
+
+        if (experimentTypes.size() > 1) {
+            return "experiment_types accepts at most one value per bulk job. " +
+                    "Provided: " + experimentTypes;
+        }
+
+        String type = experimentTypes.get(0);
+        if (type == null || type.trim().isEmpty()) {
+            return "experiment_types contains a null or empty value";
+        }
+
+        if (!VALID_EXPERIMENT_TYPES.contains(type.trim().toLowerCase())) {
+            return String.format(
+                    AnalyzerErrorConstants.APIErrors.CreateExperimentAPI.BULK_INVALID_EXPERIMENT_TYPES,
+                    List.of(type)
+            );
+        }
+
         return "";
     }
 
