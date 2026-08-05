@@ -227,6 +227,39 @@ public class DataSourceMetadataOperator {
         String containerQuery = queries.get("container");
 
         String dataSourceName = dataSourceInfo.getName();
+
+        // Check for pod label filters — if present, swap workload query to label filter version
+        String includePodLabelFilter = includeResources.getOrDefault("podLabelFilter", "");
+        String excludePodLabelFilter = excludeResources.getOrDefault("podLabelFilter", "");
+        boolean hasLabelFilter = !includePodLabelFilter.isEmpty() || !excludePodLabelFilter.isEmpty();
+
+        if (hasLabelFilter) {
+            String labelQueryTemplate = dataSourceDetailsHelper.getQueryFromProfile(metadataProfile, "workloadsWithPodLabelFilter");
+            if (labelQueryTemplate != null) {
+                StringBuilder labelFilter = new StringBuilder();
+                if (!includePodLabelFilter.isEmpty()) labelFilter.append(includePodLabelFilter);
+                if (!excludePodLabelFilter.isEmpty()) {
+                    if (labelFilter.length() > 0) labelFilter.append(",");
+                    labelFilter.append(excludePodLabelFilter);
+                }
+
+                workloadQuery = labelQueryTemplate;
+
+                String workloadIncludeRegex = includeResources.getOrDefault("workloadRegex", "");
+                String workloadExcludeRegex = excludeResources.getOrDefault("workloadRegex", "");
+                String workloadFilter = constructDynamicFilter("workload", workloadIncludeRegex, workloadExcludeRegex);
+                if (workloadQuery.contains("workload!=\"\"")) {
+                    workloadQuery = workloadQuery.replace("workload!=\"\"",
+                            workloadFilter.isEmpty() ? "workload!=\"\"" : workloadFilter);
+                }
+
+                workloadQuery = workloadQuery.replace("LABEL_FILTER", labelFilter.toString());
+                LOGGER.info("Label filter applied — using workloadsWithPodLabelFilter query");
+            } else {
+                LOGGER.warn("workloadsWithPodLabelFilter query not found in metadata profile, falling back to standard query");
+            }
+        }
+
         if (null != uniqueKey && !uniqueKey.isEmpty()) {
             LOGGER.debug("uniquekey: {}", uniqueKey);
             namespaceQuery = namespaceQuery.replace(KruizeConstants.KRUIZE_BULK_API.ADDITIONAL_LABEL, "," + uniqueKey);
