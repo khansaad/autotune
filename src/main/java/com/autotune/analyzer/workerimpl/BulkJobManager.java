@@ -561,7 +561,7 @@ public class BulkJobManager implements Runnable {
                                 value.toString();
                         sb.append(key).append("=\"").append(val).append("\",");
                     });
-                    if (!sb.isEmpty()) sb.setLength(sb.length() - 1);
+                    if (sb.length() > 0) sb.setLength(sb.length() - 1);
                     return sb.toString();
                 }
             }
