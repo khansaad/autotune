@@ -149,7 +149,9 @@ public class BulkInput {
     }
 
     public void setExperiment_types(List<String> experiment_types) {
-        this.experiment_types = experiment_types;
+        if (experiment_types != null) {
+            this.experiment_types = experiment_types;
+        }
     }
 
     // Nested class for FilterWrapper that contains 'exclude' and 'include'

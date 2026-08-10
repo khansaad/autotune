@@ -874,7 +874,10 @@ public class BulkJobManager implements Runnable {
         String namespaceName = namespace.getNamespace();
 
         // Namespace experiment name: datasource|clustername|namespace
-        String experimentName = datasource + "|" + clusterName + "|" + namespaceName;
+        String experimentName = KruizeDeploymentInfo.namespace_experiment_name_format
+                .replace("%datasource%", datasource)
+                .replace("%clustername%", clusterName)
+                .replace("%namespace%", namespaceName);
 
         if (null != labelString) {
             Map<String, String> labelsMap = parseLabelString(labelString);
