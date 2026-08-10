@@ -146,15 +146,16 @@ public class BulkConfigUpdateRequest {
     }
 
     /**
-     * Check if any field is set for update
-     * @return true if at least one field is set
+     * Check if any field is set for update.
+     * Empty collections are treated as no-op updates (not meaningful).
+     * @return true if at least one field has a meaningful update
      */
     public boolean hasUpdates() {
         return clusterName != null ||
-                datasources != null ||
-                namespaces != null ||
-                labels != null ||
-                experimentTypes != null ||
+                (datasources != null && !datasources.isEmpty()) ||
+                (namespaces != null && !namespaces.isEmpty()) ||
+                (labels != null && !labels.isEmpty()) ||
+                (experimentTypes != null && !experimentTypes.isEmpty()) ||
                 metadataProfile != null ||
                 performanceProfile != null ||
                 trialSettings != null ||
