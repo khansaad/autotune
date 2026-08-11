@@ -587,19 +587,48 @@ public class BulkJobManager implements Runnable {
         return resourceFilters;
     }
 
-    @SuppressWarnings("unchecked")
     String buildLabelFilters(Map<String, Object> labels, boolean exclude) {
         StringBuilder sb = new StringBuilder();
         for (Map.Entry<String, Object> entry : labels.entrySet()) {
-            String promKey = "label_" + entry.getKey();
+            String key = entry.getKey();
             Object value = entry.getValue();
+
+            if (key == null || key.isBlank()) {
+                LOGGER.warn("Skipping label with null or empty key");
+                continue;
+            }
+            if (value == null) {
+                LOGGER.warn("Skipping label '{}' with null value", key);
+                continue;
+            }
+
+            String promKey = "label_" + key;
 
             if (sb.length() > 0) sb.append(",");
 
-            if (value instanceof List) {
-                List<String> values = ((List<?>) value).stream()
-                        .map(v -> escapePromQLLabelValue(v.toString()))
-                        .collect(Collectors.toList());
+            if (value instanceof List<?> listValue) {
+                List<String> values = new ArrayList<>();
+                for (Object item : listValue) {
+                    if (item == null) {
+                        LOGGER.warn("Skipping null entry in label '{}' list", key);
+                        continue;
+                    }
+                    if (!(item instanceof String)) {
+                        LOGGER.warn("Skipping non-string entry in label '{}' list: {}", key, item.getClass().getSimpleName());
+                        continue;
+                    }
+                    String str = ((String) item).trim();
+                    if (!str.isEmpty()) {
+                        values.add(escapePromQLLabelValue(str));
+                    }
+                }
+                if (values.isEmpty()) {
+                    LOGGER.warn("Label '{}' has no valid values after filtering, skipping", key);
+                    if (sb.length() > 0 && sb.charAt(sb.length() - 1) == ',') {
+                        sb.setLength(sb.length() - 1);
+                    }
+                    continue;
+                }
                 if (values.size() == 1) {
                     sb.append(promKey).append(exclude ? "!=" : "=")
                             .append("\"").append(values.get(0)).append("\"");
@@ -608,10 +637,23 @@ public class BulkJobManager implements Runnable {
                     sb.append(promKey).append(exclude ? "!~" : "=~")
                             .append("\"").append(regex).append("\"");
                 }
-            } else {
-                String escaped = escapePromQLLabelValue(value.toString());
+            } else if (value instanceof String strValue) {
+                String trimmed = strValue.trim();
+                if (trimmed.isEmpty()) {
+                    LOGGER.warn("Skipping label '{}' with empty string value", key);
+                    if (sb.length() > 0 && sb.charAt(sb.length() - 1) == ',') {
+                        sb.setLength(sb.length() - 1);
+                    }
+                    continue;
+                }
+                String escaped = escapePromQLLabelValue(trimmed);
                 sb.append(promKey).append(exclude ? "!=" : "=")
                         .append("\"").append(escaped).append("\"");
+            } else {
+                LOGGER.warn("Skipping label '{}' with unsupported value type: {}", key, value.getClass().getSimpleName());
+                if (sb.length() > 0 && sb.charAt(sb.length() - 1) == ',') {
+                    sb.setLength(sb.length() - 1);
+                }
             }
         }
         return sb.toString();
