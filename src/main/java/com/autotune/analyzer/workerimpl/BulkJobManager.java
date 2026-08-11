@@ -178,10 +178,10 @@ public class BulkJobManager implements Runnable {
                 if (null != datasource) {
                     JSONObject daterange = processDateRange(this.bulkInput.getTime_range());
                     if (null != daterange) {
-                        metadataInfo = dataSourceManager.importMetadataFromDataSource(metadataProfileName, datasource, null, (Long) daterange.get(START_TIME),
+                        metadataInfo = dataSourceManager.importMetadataFromDataSource(metadataProfileName, datasource, (Long) daterange.get(START_TIME),
                                 (Long) daterange.get(END_TIME), (Integer) daterange.get(STEPS), measurementDuration, includeResourcesMap, excludeResourcesMap);
                     } else {
-                        metadataInfo = dataSourceManager.importMetadataFromDataSource(metadataProfileName, datasource, null, 0, 0,
+                        metadataInfo = dataSourceManager.importMetadataFromDataSource(metadataProfileName, datasource, 0, 0,
                                 0, measurementDuration, includeResourcesMap, excludeResourcesMap);
                     }
                     if (null == metadataInfo) {

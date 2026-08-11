@@ -67,7 +67,6 @@ public class DataSourceMetadataOperator {
      * Currently supported DataSourceProvider - Prometheus
      *
      * @param dataSourceInfo   The DataSourceInfo object containing information about the data source.
-     * @param uniqueKey        this is used as labels in query example container="xyz" namespace="abc"
      * @param startTime        Get metadata from starttime to endtime
      * @param endTime          Get metadata from starttime to endtime
      * @param steps            the interval between data points in a range query
@@ -75,10 +74,10 @@ public class DataSourceMetadataOperator {
      * @param includeResources
      * @param excludeResources
      */
-    public DataSourceMetadataInfo createDataSourceMetadata(String metadataProfileName, DataSourceInfo dataSourceInfo, String uniqueKey, long startTime,
+    public DataSourceMetadataInfo createDataSourceMetadata(String metadataProfileName, DataSourceInfo dataSourceInfo, long startTime,
                                                            long endTime, int steps,  int measurementDuration, Map<String, String> includeResources,
                                                            Map<String, String> excludeResources) throws IOException, NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
-        return processQueriesAndPopulateDataSourceMetadataInfo(metadataProfileName, dataSourceInfo, uniqueKey, startTime,
+        return processQueriesAndPopulateDataSourceMetadataInfo(metadataProfileName, dataSourceInfo, startTime,
                 endTime, steps, measurementDuration, includeResources, excludeResources);
     }
 
@@ -121,10 +120,10 @@ public class DataSourceMetadataOperator {
      *                                                                                                                                                                                                                                                                          TODO - Currently Create and Update functions have identical functionalities, based on UI workflow and requirements
      *                                                                                                                                                                                                                                                                                 need to further enhance updateDataSourceMetadata() to support namespace, workload level granular updates
      */
-    public DataSourceMetadataInfo updateDataSourceMetadata(String metadataProfileName,DataSourceInfo dataSourceInfo, String uniqueKey, long startTime,
+    public DataSourceMetadataInfo updateDataSourceMetadata(String metadataProfileName,DataSourceInfo dataSourceInfo, long startTime,
                                                            long endTime, int steps, int measurementDuration, Map<String, String> includeResources,
                                                            Map<String, String> excludeResources) throws Exception {
-        return processQueriesAndPopulateDataSourceMetadataInfo(metadataProfileName, dataSourceInfo, uniqueKey, startTime,
+        return processQueriesAndPopulateDataSourceMetadataInfo(metadataProfileName, dataSourceInfo, startTime,
                 endTime, steps, measurementDuration, includeResources, excludeResources);
     }
 
@@ -158,7 +157,6 @@ public class DataSourceMetadataOperator {
      * DataSourceMetadataInfo object
      *
      * @param dataSourceInfo   The DataSourceInfo object containing information about the data source
-     * @param uniqueKey        this is used as labels in query example container="xyz" namespace="abc"
      * @param startTime        Get metadata from starttime to endtime
      * @param endTime          Get metadata from starttime to endtime
      * @param steps            the interval between data points in a range query
@@ -167,7 +165,7 @@ public class DataSourceMetadataOperator {
      * @return DataSourceMetadataInfo object with populated metadata fields
      * todo rename processQueriesAndFetchClusterMetadataInfo
      */
-    public DataSourceMetadataInfo processQueriesAndPopulateDataSourceMetadataInfo(String metadataProfileName, DataSourceInfo dataSourceInfo, String uniqueKey,
+    public DataSourceMetadataInfo processQueriesAndPopulateDataSourceMetadataInfo(String metadataProfileName, DataSourceInfo dataSourceInfo,
                                                                                   long startTime, long endTime, int steps, int measurementDuration,
                                                                                   Map<String, String> includeResources,
                                                                                   Map<String, String> excludeResources) throws IOException, NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
@@ -260,16 +258,9 @@ public class DataSourceMetadataOperator {
             }
         }
 
-        if (null != uniqueKey && !uniqueKey.isEmpty()) {
-            LOGGER.debug("uniquekey: {}", uniqueKey);
-            namespaceQuery = namespaceQuery.replace(KruizeConstants.KRUIZE_BULK_API.ADDITIONAL_LABEL, "," + uniqueKey);
-            workloadQuery = workloadQuery.replace(KruizeConstants.KRUIZE_BULK_API.ADDITIONAL_LABEL, "," + uniqueKey);
-            containerQuery = containerQuery.replace(KruizeConstants.KRUIZE_BULK_API.ADDITIONAL_LABEL, "," + uniqueKey);
-        } else {
-            namespaceQuery = namespaceQuery.replace(KruizeConstants.KRUIZE_BULK_API.ADDITIONAL_LABEL, "");
-            workloadQuery = workloadQuery.replace(KruizeConstants.KRUIZE_BULK_API.ADDITIONAL_LABEL, "");
-            containerQuery = containerQuery.replace(KruizeConstants.KRUIZE_BULK_API.ADDITIONAL_LABEL, "");
-        }
+        namespaceQuery = namespaceQuery.replace(KruizeConstants.KRUIZE_BULK_API.ADDITIONAL_LABEL, "");
+        workloadQuery = workloadQuery.replace(KruizeConstants.KRUIZE_BULK_API.ADDITIONAL_LABEL, "");
+        containerQuery = containerQuery.replace(KruizeConstants.KRUIZE_BULK_API.ADDITIONAL_LABEL, "");
 
         namespaceQuery = namespaceQuery.replace(AnalyzerConstants.MEASUREMENT_DURATION_IN_MIN_VARAIBLE, Integer.toString(measurementDuration));
         workloadQuery = workloadQuery.replace(AnalyzerConstants.MEASUREMENT_DURATION_IN_MIN_VARAIBLE, Integer.toString(measurementDuration));
