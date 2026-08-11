@@ -121,6 +121,14 @@ function local_monitoring_tests() {
 			bash "${KRUIZE_REPO}/scripts/enable_kube_state_metrics_labels.sh" >> "${LOG}" 2>&1
 			echo "Done!"
 		fi
+		# For OpenShift, enable user workload monitoring now so the full 30-minute
+		# data collection window counts toward runtimes test metrics.
+		# This must happen before the wait, not at test-loop time.
+		if [[ ${cluster_type} != "minikube" ]] && [[ ${cluster_type} != "kind" ]]; then
+			echo -n "Enabling user workload monitoring (OpenShift)... "
+			bash "${KRUIZE_REPO}/scripts/enable_user_workload_monitoring_openshift.sh" >> "${LOG}" 2>&1
+			echo "Done!"
+		fi
 
 		# Create namespaces and install sysbench for namespace recommendation tests
 		echo "Setting up namespaces for namespace recommendation tests (${NS_BENCHMARKS[*]})..."
@@ -162,12 +170,16 @@ function local_monitoring_tests() {
 		echo "Skipping kruize setup..." | tee -a ${LOG}
 	fi
 
-		# Wait for data to be available for recommendations (30 mins)
+		# Wait for data to be available for recommendations.
+		# The measurement_duration in the experiment is 15 min, so Kruize needs at
+		# least one full 15-minute scrape window of data.  Add headroom for Kruize
+		# startup (≈2 min) and slow CI pod scheduling to avoid flaky
+		# "not enough data" failures.  45 minutes total is a safe budget.
 		echo "Waiting for metrics data collection..."
-		echo "This will take 30 minutes. Progress updates every 5 minutes..."
+		echo "This will take 45 minutes. Progress updates every 5 minutes..."
 
 		# Sleep in smaller intervals with progress updates to avoid appearing stuck
-		total_sleep=1800
+		total_sleep=2700
 		interval=300  # 5 minutes
 		elapsed=0
 
@@ -210,20 +222,6 @@ function local_monitoring_tests() {
 		mkdir ${TEST_DIR}
 		LOG="${TEST_DIR}/${test}.log"
 
-		if [ "${test}" == "runtimes" ]; then
-			# Label/monitoring setup was already applied in the upfront benchmark block.
-			# For OpenShift, user workload monitoring must still be enabled here since
-			# it depends on cluster-level configuration not available during benchmark setup.
-			if [[ ${cluster_type} != "minikube" ]] && [[ ${cluster_type} != "kind" ]]; then
-				APP_NAMESPACE="default"
-				quarkus_label="com.redhat.component-name=Quarkus"
-				quarkus_pod_name=$(oc get pod -n ${APP_NAMESPACE} | grep tfb-qrh | cut -d " " -f1)
-				oc label pod "${quarkus_pod_name}" "${quarkus_label}" -n ${APP_NAMESPACE} >> "${LOG}" 2>&1
-				echo -n "🔄 Enabling user workload monitoring..."
-				bash "${KRUIZE_REPO}/scripts/enable_user_workload_monitoring_openshift.sh" >> "${LOG}" 2>&1
-				echo "✅ Complete!"
-			fi
-		fi
 
 		echo ""
 		echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" | tee -a ${LOG}
