@@ -604,8 +604,6 @@ public class BulkJobManager implements Runnable {
 
             String promKey = "label_" + key;
 
-            if (sb.length() > 0) sb.append(",");
-
             if (value instanceof List<?> listValue) {
                 List<String> values = new ArrayList<>();
                 for (Object item : listValue) {
@@ -624,11 +622,9 @@ public class BulkJobManager implements Runnable {
                 }
                 if (values.isEmpty()) {
                     LOGGER.warn("Label '{}' has no valid values after filtering, skipping", key);
-                    if (sb.length() > 0 && sb.charAt(sb.length() - 1) == ',') {
-                        sb.setLength(sb.length() - 1);
-                    }
                     continue;
                 }
+                if (sb.length() > 0) sb.append(",");
                 if (values.size() == 1) {
                     sb.append(promKey).append(exclude ? "!=" : "=")
                             .append("\"").append(values.get(0)).append("\"");
@@ -641,19 +637,14 @@ public class BulkJobManager implements Runnable {
                 String trimmed = strValue.trim();
                 if (trimmed.isEmpty()) {
                     LOGGER.warn("Skipping label '{}' with empty string value", key);
-                    if (sb.length() > 0 && sb.charAt(sb.length() - 1) == ',') {
-                        sb.setLength(sb.length() - 1);
-                    }
                     continue;
                 }
+                if (sb.length() > 0) sb.append(",");
                 String escaped = escapePromQLLabelValue(trimmed);
                 sb.append(promKey).append(exclude ? "!=" : "=")
                         .append("\"").append(escaped).append("\"");
             } else {
                 LOGGER.warn("Skipping label '{}' with unsupported value type: {}", key, value.getClass().getSimpleName());
-                if (sb.length() > 0 && sb.charAt(sb.length() - 1) == ',') {
-                    sb.setLength(sb.length() - 1);
-                }
             }
         }
         return sb.toString();
