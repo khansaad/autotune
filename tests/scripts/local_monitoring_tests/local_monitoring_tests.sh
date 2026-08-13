@@ -100,11 +100,40 @@ function local_monitoring_tests() {
 		done
 		echo "All benchmarks installed!"
 
-		# Wait for all benchmark pods to be Ready before starting data collection.
-		echo "Waiting for benchmark pods to be Ready..."
-		kubectl wait --for=condition=Ready pod --all -n ${APP_NAMESPACE} --timeout=300s >> "${LOG}" 2>&1 \
-			&& echo "All benchmark pods are Ready!" \
-			|| echo "WARNING: Some pods in ${APP_NAMESPACE} not ready within 300s, continuing anyway"
+		# On minikube/kind the petclinic image runs OpenJ9/Semeru under load from the
+		# load generator.  The OpenJ9 JVM tries to grow Tomcat's thread pool aggressively;
+		# on minikube VMs the per-process thread limit (ulimit -u / kernel.threads-max) is
+		# low enough that the OS returns EAGAIN on pthread_create, causing:
+		#   java.lang.OutOfMemoryError: Failed to create a thread: errno 11
+		# This is not a heap OOM – it is a kernel thread-count limit.  The pod stays in
+		# Running state (JVM catches it) but the readiness probe fails permanently.
+		# Fix: cap Tomcat's max threads at a value safe for the minikube VM (50 is ample
+		# for the load the test generates and well inside the default ulimit).
+		if [[ ${cluster_type} == "minikube" ]] || [[ ${cluster_type} == "kind" ]]; then
+			petclinic_deploy=$(kubectl get deployment petclinic-sample -n ${APP_NAMESPACE} --ignore-not-found --no-headers -o name 2>/dev/null)
+			if [ -n "${petclinic_deploy}" ]; then
+				echo -n "Capping petclinic Tomcat thread pool for minikube... "
+				kubectl set env deployment/petclinic-sample \
+					-n ${APP_NAMESPACE} \
+					SERVER_TOMCAT_THREADS_MAX=50 \
+					SERVER_TOMCAT_THREADS_MIN_SPARE=5 >> "${LOG}" 2>&1
+				echo "Done!"
+			fi
+		fi
+
+		# Wait for Deployment pods (not Job pods) to be Ready before starting data
+		# collection.  Job-owned pods (load generators) never reach the Ready condition
+		# and would cause `kubectl wait --all` to exit immediately with a warning,
+		# silently skipping the readiness check for the actual application pods.
+		echo "Waiting for benchmark Deployment pods to be Ready..."
+		for deploy in petclinic-sample tfb-qrh-sample tfb-database sysbench; do
+			kubectl wait --for=condition=Ready pod \
+				-l app=${deploy} \
+				-n ${APP_NAMESPACE} \
+				--timeout=300s >> "${LOG}" 2>&1 \
+				&& echo "  - ${deploy} pods Ready!" \
+				|| echo "  - WARNING: ${deploy} pods not ready within 300s, continuing anyway"
+		done
 
 		# Apply the Quarkus label and enable monitoring for the runtimes tests.
 		# Must be done here so Prometheus scrapes JVM metrics during the 30-minute wait.
