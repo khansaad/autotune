@@ -109,7 +109,6 @@ public class Autotune {
          */
         InitiateListener contextListener = new InitiateListener();
         context.addEventListener(contextListener);
-        // Wrap the servlet context with the CORS handler (replaces the deprecated CrossOriginFilter)
         CrossOriginHandler corsHandler = KruizeCORSHandler.getHandler();
         corsHandler.setHandler(context);
         server.setHandler(corsHandler);
