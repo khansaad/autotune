@@ -250,7 +250,7 @@ public class DataSourceMetadataOperator {
 
         String dataSourceName = dataSourceInfo.getName();
 
-        workloadQuery = WorkloadQueryUtil.substituteWorkloadQueryPlaceholders(
+        workloadQuery = substituteWorkloadQueryPlaceholders(
                 workloadQuery, includePodLabelFilter, excludePodLabelFilter, hasLabelFilter);
 
         namespaceQuery = namespaceQuery.replace(KruizeConstants.KRUIZE_BULK_API.ADDITIONAL_LABEL, "");
@@ -355,6 +355,29 @@ public class DataSourceMetadataOperator {
         }
         LOGGER.info("filterBuilder: {}", filterBuilder);
         return filterBuilder.toString();
+    }
+
+    static String substituteWorkloadQueryPlaceholders(String workloadQuery,
+                                                         String includePodLabelFilter,
+                                                         String excludePodLabelFilter,
+                                                         boolean hasLabelFilter) {
+        if (hasLabelFilter) {
+            StringBuilder labelFilter = new StringBuilder();
+            if (!includePodLabelFilter.isEmpty()) labelFilter.append(includePodLabelFilter);
+            if (!excludePodLabelFilter.isEmpty()) {
+                if (labelFilter.length() > 0) labelFilter.append(",");
+                labelFilter.append(excludePodLabelFilter);
+            }
+            workloadQuery = workloadQuery.replace(KruizeConstants.KRUIZE_BULK_API.LABEL_FILTER, labelFilter.toString());
+        } else {
+            workloadQuery = workloadQuery.replace(KruizeConstants.KRUIZE_BULK_API.LABEL_FILTER, "");
+        }
+
+        workloadQuery = workloadQuery.replace(KruizeConstants.KRUIZE_BULK_API.ADDITIONAL_LABEL, "");
+
+        workloadQuery = workloadQuery.replaceAll(",{2,}", ",").replaceAll(",\\s*}", "}").replaceAll("\\{,", "{");
+
+        return workloadQuery;
     }
 
     private JsonArray fetchQueryResults(DataSourceInfo dataSourceInfo, String query, long startTime, long endTime, int steps) throws IOException, NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
