@@ -123,39 +123,20 @@ function local_monitoring_tests() {
 			fi
 		fi
 
-		# Wait for Deployment pods (not Job pods) to be Ready before starting data
-		# collection.  Job-owned pods (load generators) never reach the Ready condition
-		# and would cause `kubectl wait --all` to exit immediately with a warning,
-		# silently skipping the readiness check for the actual application pods.
-		echo "Waiting for benchmark Deployment pods to be Ready..."
+		echo "Waiting for benchmark Deployments to roll out..."
 		for deploy in petclinic-sample tfb-qrh-sample tfb-database sysbench; do
-			echo -n "  - Waiting for ${deploy} pods to exist... "
-			wait_secs=0
-			while [ $wait_secs -lt 120 ]; do
-				pod_count=$(kubectl get pods -l app=${deploy} -n ${APP_NAMESPACE} --no-headers 2>/dev/null | wc -l)
-				if [ "$pod_count" -gt 0 ]; then
-					break
-				fi
-				sleep 5
-				wait_secs=$((wait_secs + 5))
-			done
-			if [ "$pod_count" -eq 0 ]; then
-				echo "WARNING: no pods found for ${deploy} after 120s, skipping"
-				continue
-			fi
-			echo "found! Waiting for Ready..."
-			kubectl wait --for=condition=Ready pod \
-				-l app=${deploy} \
+			echo -n "  - Waiting for ${deploy}... "
+			kubectl rollout status deployment/${deploy} \
 				-n ${APP_NAMESPACE} \
 				--timeout=300s >> "${LOG}" 2>&1 \
-				&& echo "  - ${deploy} pods Ready!" \
-				|| echo "  - WARNING: ${deploy} pods not ready within 300s, continuing anyway"
+				&& echo "${deploy} Ready!" \
+				|| echo "WARNING: ${deploy} not ready within 300s, continuing anyway"
 		done
 
 		# Apply the Quarkus label and enable monitoring for the runtimes tests.
 		# Must be done here so Prometheus scrapes JVM metrics during the 30-minute wait.
 		quarkus_label="com.redhat.component-name=Quarkus"
-		quarkus_pod_name=$(kubectl get pod -n ${APP_NAMESPACE} -l app=tfb-qrh-sample --no-headers -o custom-columns=":metadata.name" | head -1)
+		quarkus_pod_name=$(kubectl get pod -n ${APP_NAMESPACE} --no-headers -o custom-columns=":metadata.name" 2>/dev/null | grep tfb-qrh-sample | head -1)
 		if [ -n "${quarkus_pod_name}" ]; then
 			kubectl label pod "${quarkus_pod_name}" "${quarkus_label}" -n ${APP_NAMESPACE} --overwrite >> "${LOG}" 2>&1
 			echo "Labelled pod ${quarkus_pod_name} with Quarkus label."
