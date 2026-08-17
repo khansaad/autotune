@@ -191,12 +191,36 @@ public class DataSourceMetadataOperator {
 
         MetadataProfile metadataProfile = MetadataProfileCollection.getInstance().getMetadataProfileCollection().get(metadataProfileName);
 
+        // Determine if pod label filters are present — if so, use label-aware workload template
+        String includePodLabelFilter = includeResources.getOrDefault("podLabelFilter", "");
+        String excludePodLabelFilter = excludeResources.getOrDefault("podLabelFilter", "");
+        boolean hasLabelFilter = !includePodLabelFilter.isEmpty() || !excludePodLabelFilter.isEmpty();
+
+        String labelWorkloadTemplate = null;
+        if (hasLabelFilter) {
+            labelWorkloadTemplate = dataSourceDetailsHelper.getQueryFromProfile(metadataProfile, "workloadsWithPodLabelFilter");
+            if (labelWorkloadTemplate == null) {
+                LOGGER.warn("workloadsWithPodLabelFilter query not found in metadata profile, falling back to standard query");
+                hasLabelFilter = false;
+            } else {
+                LOGGER.info("Label filter present — using workloadsWithPodLabelFilter template for workload query");
+            }
+        }
+
+        final boolean useLabelTemplate = hasLabelFilter;
+        final String finalLabelWorkloadTemplate = labelWorkloadTemplate;
+
         // Populate filters for each field
         fields.forEach(field -> {
             String includeRegex = includeResources.getOrDefault(field + "Regex", "");
             String excludeRegex = excludeResources.getOrDefault(field + "Regex", "");
             String filter = constructDynamicFilter(field, includeRegex, excludeRegex);
-            String queryTemplate = getQueryTemplate(field, metadataProfile);
+
+            // For the workload field, use the label-aware template when a label filter is present
+            String queryTemplate = (field.equals("workload") && useLabelTemplate)
+                    ? finalLabelWorkloadTemplate
+                    : getQueryTemplate(field, metadataProfile);
+
             String filteredQuery;
             if (queryTemplate.contains("%s")) {
                 filteredQuery = String.format(queryTemplate, filter);
@@ -226,36 +250,15 @@ public class DataSourceMetadataOperator {
 
         String dataSourceName = dataSourceInfo.getName();
 
-        // Check for pod label filters — if present, swap workload query to label filter version
-        String includePodLabelFilter = includeResources.getOrDefault("podLabelFilter", "");
-        String excludePodLabelFilter = excludeResources.getOrDefault("podLabelFilter", "");
-        boolean hasLabelFilter = !includePodLabelFilter.isEmpty() || !excludePodLabelFilter.isEmpty();
-
+        // Inject the label filter values into the workload query
         if (hasLabelFilter) {
-            String labelQueryTemplate = dataSourceDetailsHelper.getQueryFromProfile(metadataProfile, "workloadsWithPodLabelFilter");
-            if (labelQueryTemplate != null) {
-                StringBuilder labelFilter = new StringBuilder();
-                if (!includePodLabelFilter.isEmpty()) labelFilter.append(includePodLabelFilter);
-                if (!excludePodLabelFilter.isEmpty()) {
-                    if (labelFilter.length() > 0) labelFilter.append(",");
-                    labelFilter.append(excludePodLabelFilter);
-                }
-
-                workloadQuery = labelQueryTemplate;
-
-                String workloadIncludeRegex = includeResources.getOrDefault("workloadRegex", "");
-                String workloadExcludeRegex = excludeResources.getOrDefault("workloadRegex", "");
-                String workloadFilter = constructDynamicFilter("workload", workloadIncludeRegex, workloadExcludeRegex);
-                if (workloadQuery.contains("workload!=\"\"")) {
-                    workloadQuery = workloadQuery.replace("workload!=\"\"",
-                            workloadFilter.isEmpty() ? "workload!=\"\"" : workloadFilter);
-                }
-
-                workloadQuery = workloadQuery.replace("LABEL_FILTER", labelFilter.toString());
-                LOGGER.info("Label filter applied — using workloadsWithPodLabelFilter query");
-            } else {
-                LOGGER.warn("workloadsWithPodLabelFilter query not found in metadata profile, falling back to standard query");
+            StringBuilder labelFilter = new StringBuilder();
+            if (!includePodLabelFilter.isEmpty()) labelFilter.append(includePodLabelFilter);
+            if (!excludePodLabelFilter.isEmpty()) {
+                if (labelFilter.length() > 0) labelFilter.append(",");
+                labelFilter.append(excludePodLabelFilter);
             }
+            workloadQuery = workloadQuery.replace("LABEL_FILTER", labelFilter.toString());
         }
 
         namespaceQuery = namespaceQuery.replace(KruizeConstants.KRUIZE_BULK_API.ADDITIONAL_LABEL, "");

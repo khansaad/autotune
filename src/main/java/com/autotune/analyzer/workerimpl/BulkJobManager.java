@@ -581,7 +581,12 @@ public class BulkJobManager implements Runnable {
             resourceFilters.put("containerRegex", filter.getContainers() != null ?
                     filter.getContainers().stream().map(String::trim).collect(Collectors.joining("|")) : "");
             if (filter.getLabels() != null && !filter.getLabels().isEmpty()) {
-                resourceFilters.put("podLabelFilter", buildLabelFilters(filter.getLabels(), exclude));
+                String labelFilter = buildLabelFilters(filter.getLabels(), exclude);
+                if (labelFilter.isEmpty()) {
+                    LOGGER.warn("All label entries were invalid or empty — no pod label filter will be applied");
+                } else {
+                    resourceFilters.put("podLabelFilter", labelFilter);
+                }
             }
         }
         return resourceFilters;
