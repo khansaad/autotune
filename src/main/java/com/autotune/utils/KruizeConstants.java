@@ -695,7 +695,14 @@ public class KruizeConstants {
          * Wildcard to match all the Paths (Endpoints)
          */
         public static final String PATH_WILDCARD = "/*";
-        public static final String ALLOWED_ORIGINS = "*";
+        /**
+         * Comma-separated list of allowed origins for CORS.
+         * Empty string means no cross-origin requests are permitted (same-origin only).
+         * Override via the KRUIZE_ALLOWED_ORIGINS environment variable when a specific
+         * set of origins must be whitelisted (e.g. an internal dashboard host).
+         */
+        public static final String ALLOWED_ORIGINS = System.getenv("KRUIZE_ALLOWED_ORIGINS") != null
+                ? System.getenv("KRUIZE_ALLOWED_ORIGINS") : "";
         public static final String ALLOWED_METHODS = "POST, GET";
         public static final String ALLOWED_HEADERS = "X-PINGOTHER, Origin, X-Requested-With, Content-Type, Accept";
         public static final String MAX_AGE = "1728000";
