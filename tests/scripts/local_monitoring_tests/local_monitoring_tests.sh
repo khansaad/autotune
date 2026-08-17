@@ -100,23 +100,25 @@ function local_monitoring_tests() {
 		done
 		echo "All benchmarks installed!"
 
-		# On minikube/kind the petclinic image runs OpenJ9/Semeru under load from the
-		# load generator.  The OpenJ9 JVM tries to grow Tomcat's thread pool aggressively;
-		# on minikube VMs the per-process thread limit (ulimit -u / kernel.threads-max) is
-		# low enough that the OS returns EAGAIN on pthread_create, causing:
+		# On minikube/kind, petclinic now runs for 45+ minutes under continuous
+		# load (moved from per-test install to upfront install with data collection
+		# wait).  Over that duration, OpenJ9/Semeru accumulates threads across
+		# Tomcat, HikariCP, JIT, and GC — eventually exceeding minikube's low
+		# per-process thread limit (ulimit -u / kernel.threads-max), causing:
 		#   java.lang.OutOfMemoryError: Failed to create a thread: errno 11
-		# This is not a heap OOM – it is a kernel thread-count limit.  The pod stays in
-		# Running state (JVM catches it) but the readiness probe fails permanently.
-		# Fix: cap Tomcat's max threads at a value safe for the minikube VM (50 is ample
-		# for the load the test generates and well inside the default ulimit).
+		# OpenShift doesn't hit this because its worker nodes have much higher
+		# thread limits.  Fix: cap thread-creating pools and reduce stack size.
 		if [[ ${cluster_type} == "minikube" ]] || [[ ${cluster_type} == "kind" ]]; then
 			petclinic_deploy=$(kubectl get deployment petclinic-sample -n ${APP_NAMESPACE} --ignore-not-found --no-headers -o name 2>/dev/null)
 			if [ -n "${petclinic_deploy}" ]; then
-				echo -n "Capping petclinic Tomcat thread pool for minikube... "
+				echo -n "Capping petclinic thread pools for minikube... "
 				kubectl set env deployment/petclinic-sample \
 					-n ${APP_NAMESPACE} \
 					SERVER_TOMCAT_THREADS_MAX=50 \
-					SERVER_TOMCAT_THREADS_MIN_SPARE=5 >> "${LOG}" 2>&1
+					SERVER_TOMCAT_THREADS_MIN_SPARE=5 \
+					SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=5 \
+					SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE=2 \
+					JAVA_TOOL_OPTIONS="-Xss256k" >> "${LOG}" 2>&1
 				echo "Done!"
 			fi
 		fi
@@ -127,6 +129,21 @@ function local_monitoring_tests() {
 		# silently skipping the readiness check for the actual application pods.
 		echo "Waiting for benchmark Deployment pods to be Ready..."
 		for deploy in petclinic-sample tfb-qrh-sample tfb-database sysbench; do
+			echo -n "  - Waiting for ${deploy} pods to exist... "
+			wait_secs=0
+			while [ $wait_secs -lt 120 ]; do
+				pod_count=$(kubectl get pods -l app=${deploy} -n ${APP_NAMESPACE} --no-headers 2>/dev/null | wc -l)
+				if [ "$pod_count" -gt 0 ]; then
+					break
+				fi
+				sleep 5
+				wait_secs=$((wait_secs + 5))
+			done
+			if [ "$pod_count" -eq 0 ]; then
+				echo "WARNING: no pods found for ${deploy} after 120s, skipping"
+				continue
+			fi
+			echo "found! Waiting for Ready..."
 			kubectl wait --for=condition=Ready pod \
 				-l app=${deploy} \
 				-n ${APP_NAMESPACE} \
