@@ -556,9 +556,11 @@ public class BulkJobManager implements Runnable {
                 if (includeLabels != null && !includeLabels.isEmpty()) {
                     StringBuilder sb = new StringBuilder();
                     includeLabels.forEach((key, value) -> {
+                        if (value == null) return;
                         String val = (value instanceof List) ?
-                                ((List<?>) value).stream().map(Object::toString).collect(Collectors.joining("_")) :
+                                ((List<?>) value).stream().findFirst().map(Object::toString).orElse("") :
                                 value.toString();
+                        if (val.isEmpty()) return;
                         sb.append(key).append("=\"").append(val).append("\",");
                     });
                     if (sb.length() > 0) sb.setLength(sb.length() - 1);
@@ -571,7 +573,7 @@ public class BulkJobManager implements Runnable {
         return null;
     }
 
-    private Map<String, String> buildResourceFilters(BulkInput.Filter filter, boolean exclude) {
+    Map<String, String> buildResourceFilters(BulkInput.Filter filter, boolean exclude) {
         Map<String, String> resourceFilters = new HashMap<>();
         if (filter != null) {
             resourceFilters.put("namespaceRegex", filter.getNamespace() != null ?

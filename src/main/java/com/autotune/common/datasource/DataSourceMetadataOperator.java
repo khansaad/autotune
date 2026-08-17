@@ -258,7 +258,7 @@ public class DataSourceMetadataOperator {
                 if (labelFilter.length() > 0) labelFilter.append(",");
                 labelFilter.append(excludePodLabelFilter);
             }
-            workloadQuery = workloadQuery.replace("LABEL_FILTER", labelFilter.toString());
+            workloadQuery = workloadQuery.replace(KruizeConstants.KRUIZE_BULK_API.LABEL_FILTER, labelFilter.toString());
         }
 
         namespaceQuery = namespaceQuery.replace(KruizeConstants.KRUIZE_BULK_API.ADDITIONAL_LABEL, "");
