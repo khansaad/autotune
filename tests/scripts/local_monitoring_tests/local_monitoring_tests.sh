@@ -69,8 +69,8 @@ function local_monitoring_tests() {
 	# Install benchmarks
 	if [ ${skip_benchmark_setup} -eq 0 ]; then
 		APP_NAMESPACE="default"
-		BENCHMARKS=("tfb" "petclinic" "sysbench")
-		LOAD_JOBS=("petclinic-load-generator" "tfb-qrh-load-generator")
+		BENCHMARKS=("tfb" "sysbench")
+		LOAD_JOBS=("tfb-qrh-load-generator")
 		NS_BENCHMARKS=("ns1" "ns2" "ns3")
 
 		# Clone benchmarks repository if not present
@@ -91,7 +91,7 @@ function local_monitoring_tests() {
 		echo "Installing benchmarks (${BENCHMARKS[*]})..."
 		for bench in "${BENCHMARKS[@]}"; do
 			echo -n "  - Installing ${bench}... "
-			# Use kruize-demos for tfb and petclinic, default for sysbench
+			# Use kruize-demos for tfb, default for sysbench
 			if [ "${bench}" == "sysbench" ]; then
 				benchmarks_install ${APP_NAMESPACE} ${bench} "default_manifests" >> "${LOG}" 2>&1
 			else
@@ -100,31 +100,8 @@ function local_monitoring_tests() {
 		done
 		echo "All benchmarks installed!"
 
-		# On minikube/kind, petclinic now runs for 45+ minutes under continuous
-		# load (moved from per-test install to upfront install with data collection
-		# wait).  Over that duration, OpenJ9/Semeru accumulates threads across
-		# Tomcat, HikariCP, JIT, and GC — eventually exceeding minikube's low
-		# per-process thread limit (ulimit -u / kernel.threads-max), causing:
-		#   java.lang.OutOfMemoryError: Failed to create a thread: errno 11
-		# OpenShift doesn't hit this because its worker nodes have much higher
-		# thread limits.  Fix: cap thread-creating pools and reduce stack size.
-		if [[ ${cluster_type} == "minikube" ]] || [[ ${cluster_type} == "kind" ]]; then
-			petclinic_deploy=$(kubectl get deployment petclinic-sample -n ${APP_NAMESPACE} --ignore-not-found --no-headers -o name 2>/dev/null)
-			if [ -n "${petclinic_deploy}" ]; then
-				echo -n "Capping petclinic thread pools for minikube... "
-				kubectl set env deployment/petclinic-sample \
-					-n ${APP_NAMESPACE} \
-					SERVER_TOMCAT_THREADS_MAX=50 \
-					SERVER_TOMCAT_THREADS_MIN_SPARE=5 \
-					SPRING_DATASOURCE_HIKARI_MAXIMUMPOOLSIZE=5 \
-					SPRING_DATASOURCE_HIKARI_MINIMUMIDLE=2 \
-					JAVA_TOOL_OPTIONS="-Xss256k" >> "${LOG}" 2>&1
-				echo "Done!"
-			fi
-		fi
-
 		echo "Waiting for benchmark Deployments to roll out..."
-		for deploy in petclinic-sample tfb-qrh-sample tfb-database sysbench; do
+		for deploy in tfb-qrh-sample tfb-database sysbench; do
 			echo -n "  - Waiting for ${deploy}... "
 			kubectl rollout status deployment/${deploy} \
 				-n ${APP_NAMESPACE} \
@@ -198,15 +175,14 @@ function local_monitoring_tests() {
 	fi
 
 		# Wait for data to be available for recommendations.
-		# The measurement_duration in the experiment is 15 min, so Kruize needs at
-		# least one full 15-minute scrape window of data.  Add headroom for Kruize
-		# startup (≈2 min) and slow CI pod scheduling to avoid flaky
-		# "not enough data" failures.  45 minutes total is a safe budget.
+		# The longest measurement_duration across tests is 15 min, so Kruize
+		# needs at least one full 15-minute scrape window.  30 minutes gives
+		# two full windows plus headroom for Kruize startup and scrape delays.
 		echo "Waiting for metrics data collection..."
-		echo "This will take 45 minutes. Progress updates every 5 minutes..."
+		echo "This will take 30 minutes. Progress updates every 5 minutes..."
 
 		# Sleep in smaller intervals with progress updates to avoid appearing stuck
-		total_sleep=2700
+		total_sleep=1800
 		interval=300  # 5 minutes
 		elapsed=0
 
@@ -258,6 +234,31 @@ function local_monitoring_tests() {
 		echo " " | tee -a ${LOG}
 		echo "Test description: ${local_monitoring_test_description[$test]}" | tee -a ${LOG}
 		echo " " | tee -a ${LOG}
+
+		if [ "${test}" == "runtimes" ]; then
+			APP_NAMESPACE="default"
+			if [ ! -d "benchmarks" ]; then
+				echo -n "Pulling required repositories... "
+				clone_repos benchmarks
+				echo "Done!"
+			fi
+
+			echo -n "Installing petclinic benchmark for runtimes test... "
+			kubectl delete job petclinic-load-generator -n ${APP_NAMESPACE} --ignore-not-found >> "${LOG}" 2>&1
+			benchmarks_install ${APP_NAMESPACE} "petclinic" "kruize-demos" >> "${LOG}" 2>&1
+			echo "Done!"
+
+			echo "Waiting for petclinic to roll out..."
+			kubectl rollout status deployment/petclinic-sample \
+				-n ${APP_NAMESPACE} \
+				--timeout=300s >> "${LOG}" 2>&1 \
+				&& echo "petclinic-sample Ready!" \
+				|| echo "WARNING: petclinic-sample not ready within 300s, continuing anyway"
+
+			echo "Waiting 15 minutes for petclinic metrics data collection..."
+			sleep 900
+			echo "Petclinic data collection complete! ($(date))"
+		fi
 
 		pushd ${LOCAL_MONITORING_TEST_DIR}/rest_apis > /dev/null
 			echo "pytest -m ${test} --junitxml=${TEST_DIR}/report-${test}.xml --html=${TEST_DIR}/report-${test}.html --cluster_type ${cluster_type}"
