@@ -250,19 +250,10 @@ public class DataSourceMetadataOperator {
 
         String dataSourceName = dataSourceInfo.getName();
 
-        // Inject the label filter values into the workload query
-        if (hasLabelFilter) {
-            StringBuilder labelFilter = new StringBuilder();
-            if (!includePodLabelFilter.isEmpty()) labelFilter.append(includePodLabelFilter);
-            if (!excludePodLabelFilter.isEmpty()) {
-                if (labelFilter.length() > 0) labelFilter.append(",");
-                labelFilter.append(excludePodLabelFilter);
-            }
-            workloadQuery = workloadQuery.replace(KruizeConstants.KRUIZE_BULK_API.LABEL_FILTER, labelFilter.toString());
-        }
+        workloadQuery = WorkloadQueryUtil.substituteWorkloadQueryPlaceholders(
+                workloadQuery, includePodLabelFilter, excludePodLabelFilter, hasLabelFilter);
 
         namespaceQuery = namespaceQuery.replace(KruizeConstants.KRUIZE_BULK_API.ADDITIONAL_LABEL, "");
-        workloadQuery = workloadQuery.replace(KruizeConstants.KRUIZE_BULK_API.ADDITIONAL_LABEL, "");
         containerQuery = containerQuery.replace(KruizeConstants.KRUIZE_BULK_API.ADDITIONAL_LABEL, "");
 
         namespaceQuery = namespaceQuery.replace(AnalyzerConstants.MEASUREMENT_DURATION_IN_MIN_VARAIBLE, Integer.toString(measurementDuration));
