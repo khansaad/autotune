@@ -453,7 +453,7 @@ public class DataSourceMetadataHelper {
         List<Metric> metrics = metadataProfile.getQueryVariables();
         for (Metric metric : metrics) {
             String name = metric.getName();
-            if (name.contains(metricName)) {
+            if (name.equals(metricName)) {
                 return metric.getAggregationFunctionsMap().get(KruizeConstants.JSONKeys.SUM).getQuery();
             }
         }

@@ -609,7 +609,7 @@ public class BulkJobManager implements Runnable {
                 continue;
             }
 
-            String promKey = "label_" + key;
+            String promKey = "label_" + key.replace(".", "_").replace("/", "_");
 
             if (value instanceof List<?> listValue) {
                 List<String> values = new ArrayList<>();

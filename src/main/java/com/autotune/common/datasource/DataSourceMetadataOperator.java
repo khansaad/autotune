@@ -191,6 +191,11 @@ public class DataSourceMetadataOperator {
 
         MetadataProfile metadataProfile = MetadataProfileCollection.getInstance().getMetadataProfileCollection().get(metadataProfileName);
 
+        if (null == metadataProfile) {
+            LOGGER.error("Metadata profile '{}' not found in MetadataProfileCollection", metadataProfileName);
+            return null;
+        }
+
         // Determine if pod label filters are present — if so, use label-aware workload template
         String includePodLabelFilter = includeResources.getOrDefault("podLabelFilter", "");
         String excludePodLabelFilter = excludeResources.getOrDefault("podLabelFilter", "");
@@ -221,11 +226,19 @@ public class DataSourceMetadataOperator {
                     ? finalLabelWorkloadTemplate
                     : getQueryTemplate(field, metadataProfile);
 
+            if (queryTemplate == null) {
+                LOGGER.error("Query template is null for field {}, cannot proceed", field);
+                queries.put(field, null);
+                return;
+            }
             String filteredQuery;
+            // For the label workload template, only allow %s substitution; avoid replacing
+            // the field!="" pattern which may legitimately appear inside PromQL label selectors.
+            boolean isLabelTemplate = useLabelTemplate && field.equals("workload");
             if (queryTemplate.contains("%s")) {
                 filteredQuery = String.format(queryTemplate, filter);
 
-            } else if (queryTemplate.contains(field + "!=\"\"")) {
+            } else if (!isLabelTemplate && queryTemplate.contains(field + "!=\"\"")) {
                 filteredQuery = queryTemplate.replace(
                     field + "!=\"\"",
                     filter.isEmpty() ? field + "!=\"\"" : filter
@@ -242,6 +255,12 @@ public class DataSourceMetadataOperator {
 
             queries.put(field, filteredQuery);
         });
+
+        // Abort if any required query template was missing
+        if (queries.containsValue(null)) {
+            LOGGER.error("One or more query templates could not be resolved for metadata profile '{}', aborting metadata fetch", metadataProfileName);
+            return null;
+        }
 
         // Construct queries
         String namespaceQuery = queries.get("namespace");
@@ -297,6 +316,10 @@ public class DataSourceMetadataOperator {
 
             if (op.validateResultArray(workloadDataResultArray)) {
                 datasourceWorkloads = dataSourceDetailsHelper.getWorkloadInfo(workloadDataResultArray);
+            }
+            if (hasLabelFilter && datasourceWorkloads.isEmpty()) {
+                LOGGER.info("Label filter matched zero workloads — skipping experiment creation");
+                return null;
             }
             dataSourceDetailsHelper.updateWorkloadDataSourceMetadataInfoObject(dataSourceName, dataSourceMetadataInfo,
                     datasourceWorkloads);
@@ -363,10 +386,9 @@ public class DataSourceMetadataOperator {
                                                          boolean hasLabelFilter) {
         if (hasLabelFilter) {
             StringBuilder labelFilter = new StringBuilder();
-            if (!includePodLabelFilter.isEmpty()) labelFilter.append(includePodLabelFilter);
+            if (!includePodLabelFilter.isEmpty()) labelFilter.append(",").append(includePodLabelFilter);
             if (!excludePodLabelFilter.isEmpty()) {
-                if (labelFilter.length() > 0) labelFilter.append(",");
-                labelFilter.append(excludePodLabelFilter);
+                labelFilter.append(",").append(excludePodLabelFilter);
             }
             workloadQuery = workloadQuery.replace(KruizeConstants.KRUIZE_BULK_API.LABEL_FILTER, labelFilter.toString());
         } else {
@@ -375,7 +397,7 @@ public class DataSourceMetadataOperator {
 
         workloadQuery = workloadQuery.replace(KruizeConstants.KRUIZE_BULK_API.ADDITIONAL_LABEL, "");
 
-        workloadQuery = workloadQuery.replaceAll(",{2,}", ",").replaceAll(",\\s*}", "}").replaceAll("\\{,", "{");
+        workloadQuery = workloadQuery.replaceAll("\\s{2,}", " ").replaceAll("\\s+}", "}").replaceAll("\\{\\s+", "{");
 
         return workloadQuery;
     }
