@@ -10,7 +10,7 @@
     <properties>
         <fabric8-version>7.8.0</fabric8-version>
         <org-json-version>20260522</org-json-version>
-        <jetty-version>12.1.7</jetty-version>
+        <jetty-version>12.1.10</jetty-version>
         <log4j-version>2.26.0</log4j-version>
         <java-version>25</java-version>
         <prometheus-metrics-version>1.8.0</prometheus-metrics-version>
@@ -24,7 +24,7 @@
         <hibernate-Validator>8.0.3.Final</hibernate-Validator>
         <micrometer-version>1.17.0</micrometer-version>
         <awssdk-version>2.46.5</awssdk-version>
-        <jackson-version>2.22.0</jackson-version>
+        <jackson-version>2.22.1</jackson-version>
         <evalex-version>3.6.2</evalex-version>
         <mockito-version>5.23.0</mockito-version>
         <kafka-version>4.2.0</kafka-version>
@@ -202,6 +202,11 @@
                 <version>4.1.136.Final</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>at.yawk.lz4</groupId>
+                <artifactId>lz4-java</artifactId>
+                <version>1.11.1</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
