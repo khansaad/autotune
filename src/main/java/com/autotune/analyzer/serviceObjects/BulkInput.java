@@ -162,7 +162,7 @@ public class BulkInput {
         private List<String> namespace;
         private List<String> workload;
         private List<String> containers;
-        private Map<String, Object> labels;
+        private Map<String, String> labels;
 
         // Getters and Setters
         public List<String> getNamespace() {
@@ -189,11 +189,11 @@ public class BulkInput {
             this.containers = containers;
         }
 
-        public Map<String, Object> getLabels() {
+        public Map<String, String> getLabels() {
             return labels;
         }
 
-        public void setLabels(Map<String, Object> labels) {
+        public void setLabels(Map<String, String> labels) {
             this.labels = labels;
         }
     }
