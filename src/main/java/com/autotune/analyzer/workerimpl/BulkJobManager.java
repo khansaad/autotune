@@ -154,9 +154,9 @@ public class BulkJobManager implements Runnable {
             Map<String, String> excludeResourcesMap = new HashMap<>();
             try {
                 if (this.bulkInput.getFilter() != null) {
-                    labelString = getLabelsForExperimentName(this.bulkInput.getFilter());
-                    includeResourcesMap = buildResourceFilters(this.bulkInput.getFilter().getInclude(), false);
-                    excludeResourcesMap = buildResourceFilters(this.bulkInput.getFilter().getExclude(), true);
+                    labelString = getLabels(this.bulkInput.getFilter());
+                    includeResourcesMap = buildRegexFilters(this.bulkInput.getFilter().getInclude());
+                    excludeResourcesMap = buildRegexFilters(this.bulkInput.getFilter().getExclude());
                 }
                 if (null == this.bulkInput.getDatasource()) {
                     this.bulkInput.setDatasource(CREATE_EXPERIMENT_CONFIG_BEAN.getDatasourceName());
@@ -178,10 +178,10 @@ public class BulkJobManager implements Runnable {
                 if (null != datasource) {
                     JSONObject daterange = processDateRange(this.bulkInput.getTime_range());
                     if (null != daterange) {
-                        metadataInfo = dataSourceManager.importMetadataFromDataSource(metadataProfileName, datasource, (Long) daterange.get(START_TIME),
+                        metadataInfo = dataSourceManager.importMetadataFromDataSource(metadataProfileName, datasource, labelString, (Long) daterange.get(START_TIME),
                                 (Long) daterange.get(END_TIME), (Integer) daterange.get(STEPS), measurementDuration, includeResourcesMap, excludeResourcesMap);
                     } else {
-                        metadataInfo = dataSourceManager.importMetadataFromDataSource(metadataProfileName, datasource, 0, 0,
+                        metadataInfo = dataSourceManager.importMetadataFromDataSource(metadataProfileName, datasource, labelString, 0, 0,
                                 0, measurementDuration, includeResourcesMap, excludeResourcesMap);
                     }
                     if (null == metadataInfo) {
@@ -192,9 +192,7 @@ public class BulkJobManager implements Runnable {
                         //  TODO: Remove getExperimentMap and instead collect all metadata, process it, and create experiments dynamically during metadata iteration.
                         jobData.getSummary().setTotal_experiments(createExperimentAPIObjectMap.size());
                         jobData.getSummary().setProcessed_experiments(0);
-                        if (createExperimentAPIObjectMap.isEmpty()) {
-                            setFinalJobStatus(COMPLETED, String.valueOf(HttpURLConnection.HTTP_OK), NOTHING_INFO, datasource);
-                        } else if (jobData.getSummary().getTotal_experiments() > KruizeDeploymentInfo.bulk_api_limit) {
+                        if (jobData.getSummary().getTotal_experiments() > KruizeDeploymentInfo.bulk_api_limit) {
                             setFinalJobStatus(FAILED, String.valueOf(HttpURLConnection.HTTP_BAD_REQUEST), LIMIT_INFO, datasource);
                         } else {
                             if (!KruizeDeploymentInfo.test_use_only_cache_job_in_mem) {                       // Todo Try to avoid this check in multiple places
@@ -549,31 +547,34 @@ public class BulkJobManager implements Runnable {
         }
     }
 
-    private String getLabelsForExperimentName(BulkInput.FilterWrapper filter) {
+    private String getLabels(BulkInput.FilterWrapper filter) {
+        String uniqueKey = null;
         try {
+            // Process labels in the 'include' section
             if (filter.getInclude() != null) {
-                Map<String, Object> includeLabels = filter.getInclude().getLabels();
+                // Initialize StringBuilder for uniqueKey
+                StringBuilder includeLabelsBuilder = new StringBuilder();
+                Map<String, String> includeLabels = filter.getInclude().getLabels();
                 if (includeLabels != null && !includeLabels.isEmpty()) {
-                    StringBuilder sb = new StringBuilder();
-                    includeLabels.forEach((key, value) -> {
-                        if (value == null) return;
-                        String val = (value instanceof List) ?
-                                ((List<?>) value).stream().findFirst().map(Object::toString).orElse("") :
-                                value.toString();
-                        if (val.isEmpty()) return;
-                        sb.append(key).append("=\"").append(val).append("\",");
-                    });
-                    if (sb.length() > 0) sb.setLength(sb.length() - 1);
-                    return sb.toString();
+                    includeLabels.forEach((key, value) ->
+                            includeLabelsBuilder.append(key).append("=").append("\"" + value + "\"").append(",")
+                    );
+                    // Remove trailing comma
+                    if (!includeLabelsBuilder.isEmpty()) {
+                        includeLabelsBuilder.setLength(includeLabelsBuilder.length() - 1);
+                    }
+                    LOGGER.debug("Include Labels: {}", includeLabelsBuilder);
+                    uniqueKey = includeLabelsBuilder.toString();
                 }
             }
         } catch (Exception e) {
-            LOGGER.error("Error building label string for experiment name: {}", e.getMessage());
+            e.printStackTrace();
+            LOGGER.error(e.getMessage());
         }
-        return null;
+        return uniqueKey;
     }
 
-    Map<String, String> buildResourceFilters(BulkInput.Filter filter, boolean exclude) {
+    private Map<String, String> buildRegexFilters(BulkInput.Filter filter) {
         Map<String, String> resourceFilters = new HashMap<>();
         if (filter != null) {
             resourceFilters.put("namespaceRegex", filter.getNamespace() != null ?
@@ -582,85 +583,8 @@ public class BulkJobManager implements Runnable {
                     filter.getWorkload().stream().map(String::trim).collect(Collectors.joining("|")) : "");
             resourceFilters.put("containerRegex", filter.getContainers() != null ?
                     filter.getContainers().stream().map(String::trim).collect(Collectors.joining("|")) : "");
-            if (filter.getLabels() != null && !filter.getLabels().isEmpty()) {
-                String labelFilter = buildLabelFilters(filter.getLabels(), exclude);
-                if (labelFilter.isEmpty()) {
-                    LOGGER.warn("All label entries were invalid or empty — no pod label filter will be applied");
-                } else {
-                    resourceFilters.put("podLabelFilter", labelFilter);
-                }
-            }
         }
         return resourceFilters;
-    }
-
-    String buildLabelFilters(Map<String, Object> labels, boolean exclude) {
-        StringBuilder sb = new StringBuilder();
-        for (Map.Entry<String, Object> entry : labels.entrySet()) {
-            String key = entry.getKey();
-            Object value = entry.getValue();
-
-            if (key == null || key.isBlank()) {
-                LOGGER.warn("Skipping label with null or empty key");
-                continue;
-            }
-            if (value == null) {
-                LOGGER.warn("Skipping label '{}' with null value", key);
-                continue;
-            }
-
-            String promKey = "label_" + key.replace(".", "_").replace("/", "_");
-
-            if (value instanceof List<?> listValue) {
-                List<String> values = new ArrayList<>();
-                for (Object item : listValue) {
-                    if (item == null) {
-                        LOGGER.warn("Skipping null entry in label '{}' list", key);
-                        continue;
-                    }
-                    if (!(item instanceof String)) {
-                        LOGGER.warn("Skipping non-string entry in label '{}' list: {}", key, item.getClass().getSimpleName());
-                        continue;
-                    }
-                    String str = ((String) item).trim();
-                    if (!str.isEmpty()) {
-                        values.add(escapePromQLLabelValue(str));
-                    }
-                }
-                if (values.isEmpty()) {
-                    LOGGER.warn("Label '{}' has no valid values after filtering, skipping", key);
-                    continue;
-                }
-                if (sb.length() > 0) sb.append(",");
-                if (values.size() == 1) {
-                    sb.append(promKey).append(exclude ? "!=" : "=")
-                            .append("\"").append(values.get(0)).append("\"");
-                } else {
-                    String regex = String.join("|", values);
-                    sb.append(promKey).append(exclude ? "!~" : "=~")
-                            .append("\"").append(regex).append("\"");
-                }
-            } else if (value instanceof String strValue) {
-                String trimmed = strValue.trim();
-                if (trimmed.isEmpty()) {
-                    LOGGER.warn("Skipping label '{}' with empty string value", key);
-                    continue;
-                }
-                if (sb.length() > 0) sb.append(",");
-                String escaped = escapePromQLLabelValue(trimmed);
-                sb.append(promKey).append(exclude ? "!=" : "=")
-                        .append("\"").append(escaped).append("\"");
-            } else {
-                LOGGER.warn("Skipping label '{}' with unsupported value type: {}", key, value.getClass().getSimpleName());
-            }
-        }
-        return sb.toString();
-    }
-
-    static String escapePromQLLabelValue(String value) {
-        return value.replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\n", "\\n");
     }
 
     private JSONObject processDateRange(BulkInput.TimeRange timeRange) {
