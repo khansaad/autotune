@@ -33,7 +33,7 @@
       ]
     },
     {
-      "name": "workloadsWithPodLabelFilter",
+      "name":  "workloadsWithPodLabelFilter",
       "datasource": "prometheus",
       "value_type": "double",
       "kubernetes_object": "container",
