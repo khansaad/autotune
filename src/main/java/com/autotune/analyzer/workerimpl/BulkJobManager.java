@@ -624,7 +624,7 @@ public class BulkJobManager implements Runnable {
                     }
                     String str = ((String) item).trim();
                     if (!str.isEmpty()) {
-                        values.add(escapePromQLLabelValue(str));
+                        values.add(str);
                     }
                 }
                 if (values.isEmpty()) {
@@ -634,9 +634,11 @@ public class BulkJobManager implements Runnable {
                 if (sb.length() > 0) sb.append(",");
                 if (values.size() == 1) {
                     sb.append(promKey).append(exclude ? "!=" : "=")
-                            .append("\"").append(values.get(0)).append("\"");
+                            .append("\"").append(escapePromQLLabelValue(values.get(0))).append("\"");
                 } else {
-                    String regex = String.join("|", values);
+                    String regex = values.stream()
+                            .map(BulkJobManager::escapePromQLRegexValue)
+                            .collect(Collectors.joining("|"));
                     sb.append(promKey).append(exclude ? "!~" : "=~")
                             .append("\"").append(regex).append("\"");
                 }
@@ -661,6 +663,11 @@ public class BulkJobManager implements Runnable {
         return value.replace("\\", "\\\\")
                 .replace("\"", "\\\"")
                 .replace("\n", "\\n");
+    }
+
+    static String escapePromQLRegexValue(String value) {
+        return escapePromQLLabelValue(value)
+                .replaceAll("([.+*?^${}()\\[\\]|])", "\\\\$1");
     }
 
     private JSONObject processDateRange(BulkInput.TimeRange timeRange) {
