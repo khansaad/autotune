@@ -398,7 +398,8 @@ public class Autotune {
                     // Roll back the failed transaction so the session is clean for the next file
                     try {
                         transaction.rollback();
-                    } catch (Exception ignore) {
+                    } catch (Exception ex) {
+                        LOGGER.warn("Failed to rollback transaction after failure of SQL: {}", trimmed, ex);
                     }
                 }
             }
