@@ -149,7 +149,7 @@ public class BulkInput {
     }
 
     public void setExperiment_types(List<String> experiment_types) {
-        if (experiment_types != null) {
+        if (experiment_types != null && !experiment_types.isEmpty()) {
             this.experiment_types = experiment_types;
         }
     }
