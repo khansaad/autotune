@@ -101,17 +101,6 @@ import static com.autotune.utils.KruizeConstants.KRUIZE_BULK_API.NotificationCon
 public class BulkJobManager implements Runnable {
     private static final Logger LOGGER = LoggerFactory.getLogger(BulkJobManager.class);
 
-    // Label filter log messages
-    private static final String LOG_LABEL_EXPERIMENT_NAME_ERROR = "Error building label string for experiment name: {}";
-    private static final String LOG_LABEL_ALL_INVALID = "All label entries were invalid or empty — no pod label filter will be applied";
-    private static final String LOG_LABEL_NULL_KEY = "Skipping label with null or empty key";
-    private static final String LOG_LABEL_NULL_VALUE = "Skipping label '{}' with null value";
-    private static final String LOG_LABEL_NULL_LIST_ENTRY = "Skipping null entry in label '{}' list";
-    private static final String LOG_LABEL_NON_STRING_ENTRY = "Skipping non-string entry in label '{}' list: {}";
-    private static final String LOG_LABEL_NO_VALID_VALUES = "Label '{}' has no valid values after filtering, skipping";
-    private static final String LOG_LABEL_EMPTY_VALUE = "Skipping label '{}' with empty string value";
-    private static final String LOG_LABEL_UNSUPPORTED_TYPE = "Skipping label '{}' with unsupported value type: {}";
-
     ExecutorService createExecutor = Executors.newFixedThreadPool(bulk_thread_pool_size);
     ExecutorService generateExecutor = Executors.newFixedThreadPool(bulk_thread_pool_size);
     private String jobID;
@@ -580,7 +569,7 @@ public class BulkJobManager implements Runnable {
                 }
             }
         } catch (Exception e) {
-            LOGGER.error(LOG_LABEL_EXPERIMENT_NAME_ERROR, e.getMessage());
+            LOGGER.error(KruizeConstants.BulkAPIConstants.LabelFilterConstants.LOG_LABEL_EXPERIMENT_NAME_ERROR, e.getMessage(), e);
         }
         return null;
     }
@@ -597,7 +586,7 @@ public class BulkJobManager implements Runnable {
             if (filter.getLabels() != null && !filter.getLabels().isEmpty()) {
                 String labelFilter = buildLabelFilters(filter.getLabels(), exclude);
                 if (labelFilter.isEmpty()) {
-                    LOGGER.warn(LOG_LABEL_ALL_INVALID);
+                    LOGGER.warn(KruizeConstants.BulkAPIConstants.LabelFilterConstants.LOG_LABEL_ALL_INVALID);
                 } else {
                     resourceFilters.put("podLabelFilter", labelFilter);
                 }
@@ -613,11 +602,11 @@ public class BulkJobManager implements Runnable {
             Object value = entry.getValue();
 
             if (key == null || key.isBlank()) {
-                LOGGER.warn(LOG_LABEL_NULL_KEY);
+                LOGGER.warn(KruizeConstants.BulkAPIConstants.LabelFilterConstants.LOG_LABEL_NULL_KEY);
                 continue;
             }
             if (value == null) {
-                LOGGER.warn(LOG_LABEL_NULL_VALUE, key);
+                LOGGER.warn(KruizeConstants.BulkAPIConstants.LabelFilterConstants.LOG_LABEL_NULL_VALUE, key);
                 continue;
             }
 
@@ -627,11 +616,11 @@ public class BulkJobManager implements Runnable {
                 List<String> values = new ArrayList<>();
                 for (Object item : listValue) {
                     if (item == null) {
-                        LOGGER.warn(LOG_LABEL_NULL_LIST_ENTRY, key);
+                        LOGGER.warn(KruizeConstants.BulkAPIConstants.LabelFilterConstants.LOG_LABEL_NULL_LIST_ENTRY, key);
                         continue;
                     }
                     if (!(item instanceof String)) {
-                        LOGGER.warn(LOG_LABEL_NON_STRING_ENTRY, key, item.getClass().getSimpleName());
+                        LOGGER.warn(KruizeConstants.BulkAPIConstants.LabelFilterConstants.LOG_LABEL_NON_STRING_ENTRY, key, item.getClass().getSimpleName());
                         continue;
                     }
                     String str = ((String) item).trim();
@@ -640,7 +629,7 @@ public class BulkJobManager implements Runnable {
                     }
                 }
                 if (values.isEmpty()) {
-                    LOGGER.warn(LOG_LABEL_NO_VALID_VALUES, key);
+                    LOGGER.warn(KruizeConstants.BulkAPIConstants.LabelFilterConstants.LOG_LABEL_NO_VALID_VALUES, key);
                     continue;
                 }
                 if (sb.length() > 0) sb.append(",");
@@ -657,7 +646,7 @@ public class BulkJobManager implements Runnable {
             } else if (value instanceof String strValue) {
                 String trimmed = strValue.trim();
                 if (trimmed.isEmpty()) {
-                    LOGGER.warn(LOG_LABEL_EMPTY_VALUE, key);
+                    LOGGER.warn(KruizeConstants.BulkAPIConstants.LabelFilterConstants.LOG_LABEL_EMPTY_VALUE, key);
                     continue;
                 }
                 if (sb.length() > 0) sb.append(",");
@@ -665,7 +654,7 @@ public class BulkJobManager implements Runnable {
                 sb.append(promKey).append(exclude ? "!=" : "=")
                         .append("\"").append(escaped).append("\"");
             } else {
-                LOGGER.warn(LOG_LABEL_UNSUPPORTED_TYPE, key, value.getClass().getSimpleName());
+                LOGGER.warn(KruizeConstants.BulkAPIConstants.LabelFilterConstants.LOG_LABEL_UNSUPPORTED_TYPE, key, value.getClass().getSimpleName());
             }
         }
         return sb.toString();
