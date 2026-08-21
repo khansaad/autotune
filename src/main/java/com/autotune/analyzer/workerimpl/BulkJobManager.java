@@ -569,7 +569,7 @@ public class BulkJobManager implements Runnable {
                 }
             }
         } catch (Exception e) {
-            LOGGER.error(KruizeConstants.BulkAPIConstants.LabelFilterConstants.LOG_LABEL_EXPERIMENT_NAME_ERROR, e.getMessage(), e);
+            LOGGER.error(KruizeConstants.KRUIZE_BULK_API.LabelFilterConstants.LOG_LABEL_EXPERIMENT_NAME_ERROR, e.getMessage(), e);
         }
         return null;
     }
@@ -586,7 +586,7 @@ public class BulkJobManager implements Runnable {
             if (filter.getLabels() != null && !filter.getLabels().isEmpty()) {
                 String labelFilter = buildLabelFilters(filter.getLabels(), exclude);
                 if (labelFilter.isEmpty()) {
-                    LOGGER.warn(KruizeConstants.BulkAPIConstants.LabelFilterConstants.LOG_LABEL_ALL_INVALID);
+                    LOGGER.warn(KruizeConstants.KRUIZE_BULK_API.LabelFilterConstants.LOG_LABEL_ALL_INVALID);
                 } else {
                     resourceFilters.put("podLabelFilter", labelFilter);
                 }
@@ -602,11 +602,11 @@ public class BulkJobManager implements Runnable {
             Object value = entry.getValue();
 
             if (key == null || key.isBlank()) {
-                LOGGER.warn(KruizeConstants.BulkAPIConstants.LabelFilterConstants.LOG_LABEL_NULL_KEY);
+                LOGGER.warn(KruizeConstants.KRUIZE_BULK_API.LabelFilterConstants.LOG_LABEL_NULL_KEY);
                 continue;
             }
             if (value == null) {
-                LOGGER.warn(KruizeConstants.BulkAPIConstants.LabelFilterConstants.LOG_LABEL_NULL_VALUE, key);
+                LOGGER.warn(KruizeConstants.KRUIZE_BULK_API.LabelFilterConstants.LOG_LABEL_NULL_VALUE, key);
                 continue;
             }
 
@@ -616,11 +616,11 @@ public class BulkJobManager implements Runnable {
                 List<String> values = new ArrayList<>();
                 for (Object item : listValue) {
                     if (item == null) {
-                        LOGGER.warn(KruizeConstants.BulkAPIConstants.LabelFilterConstants.LOG_LABEL_NULL_LIST_ENTRY, key);
+                        LOGGER.warn(KruizeConstants.KRUIZE_BULK_API.LabelFilterConstants.LOG_LABEL_NULL_LIST_ENTRY, key);
                         continue;
                     }
                     if (!(item instanceof String)) {
-                        LOGGER.warn(KruizeConstants.BulkAPIConstants.LabelFilterConstants.LOG_LABEL_NON_STRING_ENTRY, key, item.getClass().getSimpleName());
+                        LOGGER.warn(KruizeConstants.KRUIZE_BULK_API.LabelFilterConstants.LOG_LABEL_NON_STRING_ENTRY, key, item.getClass().getSimpleName());
                         continue;
                     }
                     String str = ((String) item).trim();
@@ -629,7 +629,7 @@ public class BulkJobManager implements Runnable {
                     }
                 }
                 if (values.isEmpty()) {
-                    LOGGER.warn(KruizeConstants.BulkAPIConstants.LabelFilterConstants.LOG_LABEL_NO_VALID_VALUES, key);
+                    LOGGER.warn(KruizeConstants.KRUIZE_BULK_API.LabelFilterConstants.LOG_LABEL_NO_VALID_VALUES, key);
                     continue;
                 }
                 if (sb.length() > 0) sb.append(",");
@@ -646,7 +646,7 @@ public class BulkJobManager implements Runnable {
             } else if (value instanceof String strValue) {
                 String trimmed = strValue.trim();
                 if (trimmed.isEmpty()) {
-                    LOGGER.warn(KruizeConstants.BulkAPIConstants.LabelFilterConstants.LOG_LABEL_EMPTY_VALUE, key);
+                    LOGGER.warn(KruizeConstants.KRUIZE_BULK_API.LabelFilterConstants.LOG_LABEL_EMPTY_VALUE, key);
                     continue;
                 }
                 if (sb.length() > 0) sb.append(",");
@@ -654,7 +654,7 @@ public class BulkJobManager implements Runnable {
                 sb.append(promKey).append(exclude ? "!=" : "=")
                         .append("\"").append(escaped).append("\"");
             } else {
-                LOGGER.warn(KruizeConstants.BulkAPIConstants.LabelFilterConstants.LOG_LABEL_UNSUPPORTED_TYPE, key, value.getClass().getSimpleName());
+                LOGGER.warn(KruizeConstants.KRUIZE_BULK_API.LabelFilterConstants.LOG_LABEL_UNSUPPORTED_TYPE, key, value.getClass().getSimpleName());
             }
         }
         return sb.toString();
