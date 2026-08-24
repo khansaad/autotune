@@ -22,7 +22,7 @@ import com.autotune.analyzer.serviceObjects.ListDatasourcesAPIObject;
 import com.autotune.analyzer.utils.AnalyzerConstants;
 import com.autotune.analyzer.utils.AnalyzerErrorConstants;
 import com.autotune.analyzer.utils.GsonUTCDateAdapter;
-import com.autotune.common.auth.Credentials;
+import com.autotune.common.auth.AuthenticationConfig;
 import com.autotune.common.data.system.info.device.DeviceDetails;
 import com.autotune.common.datasource.DataSourceInfo;
 import com.autotune.database.service.ExperimentDBService;
@@ -159,12 +159,12 @@ public class ListDatasources extends HttpServlet {
                 .addSerializationExclusionStrategy(new ExclusionStrategy() {
                     @Override
                     public boolean shouldSkipField(FieldAttributes f) {
-                        // Never emit credential fields
-                        return Credentials.class.isAssignableFrom(f.getDeclaredClass());
+                        // Never emit authentication config (includes credentials)
+                        return AuthenticationConfig.class.isAssignableFrom(f.getDeclaredClass());
                     }
                     @Override
                     public boolean shouldSkipClass(Class<?> clazz) {
-                        return Credentials.class.isAssignableFrom(clazz);
+                        return AuthenticationConfig.class.isAssignableFrom(clazz);
                     }
                 })
                 .create();
