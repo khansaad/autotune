@@ -452,8 +452,7 @@ public class DSMetadataService extends HttpServlet {
                 .addSerializationExclusionStrategy(new ExclusionStrategy() {
                     @Override
                     public boolean shouldSkipField(FieldAttributes f) {
-                        // Never emit authentication config (includes credentials)
-                        return AuthenticationConfig.class.isAssignableFrom(f.getDeclaredClass());
+                        return false;
                     }
                     @Override
                     public boolean shouldSkipClass(Class<?> clazz) {
