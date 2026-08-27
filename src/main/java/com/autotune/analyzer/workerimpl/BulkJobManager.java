@@ -771,26 +771,19 @@ public class BulkJobManager implements Runnable {
      * Defaults to CONTAINER when experiment_types is absent or empty.
      *
      * <p>BulkServiceValidation enforces that at most one entry is present and
-     * that it is a recognised value ("container" or "namespace"), so by the
+     * that it is a valid {@link AnalyzerConstants.ExperimentType}, so by the
      * time this method is called the list is guaranteed to be null, empty, or
-     * a single valid string. The {@code IllegalArgumentException} fallback is
-     * kept purely as a defensive measure.</p>
+     * a single valid enum value.</p>
      *
      * @param experimentTypes the validated list from BulkInput.experiment_types
      *                        (null, empty, or exactly one recognized value)
      * @return the resolved ExperimentType
      */
-    private AnalyzerConstants.ExperimentType resolveExperimentType(List<String> experimentTypes) {
+    private AnalyzerConstants.ExperimentType resolveExperimentType(List<AnalyzerConstants.ExperimentType> experimentTypes) {
         if (experimentTypes == null || experimentTypes.isEmpty()) {
             return AnalyzerConstants.ExperimentType.CONTAINER;
         }
-        // Validation guarantees exactly one entry; get(0) is intentional.
-        try {
-            return AnalyzerConstants.ExperimentType.valueOf(experimentTypes.get(0).trim().toUpperCase());
-        } catch (IllegalArgumentException e) {
-            LOGGER.warn("Unrecognised experiment_type '{}' in bulk input; defaulting to CONTAINER", experimentTypes.get(0));
-            return AnalyzerConstants.ExperimentType.CONTAINER;
-        }
+        return experimentTypes.get(0);
     }
 
     /**

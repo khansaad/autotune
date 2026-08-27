@@ -24,7 +24,9 @@ import com.autotune.common.datasource.DataSourceInfo;
 import com.autotune.common.datasource.DataSourceOperatorImpl;
 import com.autotune.common.utils.CommonUtils;
 import com.autotune.database.service.ExperimentDBService;
+import com.autotune.analyzer.utils.AnalyzerConstants;
 import com.autotune.utils.KruizeConstants;
+import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,7 +57,8 @@ public class BulkServiceValidation {
     private static final int MAX_CLUSTER_NAME_LENGTH = 253;
 
     // Valid experiment types supported by the bulk engine
-    private static final Set<String> VALID_EXPERIMENT_TYPES = Set.of(KruizeConstants.JSONKeys.CONTAINER, KruizeConstants.JSONKeys.NAMESPACE);
+    private static final Set<AnalyzerConstants.ExperimentType> VALID_EXPERIMENT_TYPES = Set.of(
+            AnalyzerConstants.ExperimentType.CONTAINER, AnalyzerConstants.ExperimentType.NAMESPACE);
 
     // Valid model and term names (case-insensitive)
     private static final List<String> VALID_MODELS = Arrays.asList(
@@ -317,8 +320,8 @@ public class BulkServiceValidation {
      * @param experimentTypes the list of experiment types to validate (can be null)
      * @return an error message if validation fails; otherwise an empty string
      */
-    public static String validateExperimentTypes(List<String> experimentTypes) {
-        if (experimentTypes == null || experimentTypes.isEmpty()) {
+    public static String validateExperimentTypes(List<AnalyzerConstants.ExperimentType> experimentTypes) {
+        if (CollectionUtils.isEmpty(experimentTypes)) {
             return ""; // null/empty is valid; defaults to container experiments
         }
 
@@ -327,12 +330,12 @@ public class BulkServiceValidation {
                     "Provided: " + experimentTypes;
         }
 
-        String type = experimentTypes.get(0);
-        if (type == null || type.trim().isEmpty()) {
-            return "experiment_types contains a null or empty value";
+        AnalyzerConstants.ExperimentType type = experimentTypes.get(0);
+        if (type == null) {
+            return "experiment_types contains a null value";
         }
 
-        if (!VALID_EXPERIMENT_TYPES.contains(type.trim().toLowerCase())) {
+        if (!VALID_EXPERIMENT_TYPES.contains(type)) {
             return String.format(
                     AnalyzerErrorConstants.APIErrors.CreateExperimentAPI.BULK_INVALID_EXPERIMENT_TYPES,
                     List.of(type)

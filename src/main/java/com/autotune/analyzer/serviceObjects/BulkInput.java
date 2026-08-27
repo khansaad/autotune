@@ -17,7 +17,9 @@ package com.autotune.analyzer.serviceObjects;
 
 import com.autotune.analyzer.kruizeObject.ModelSettings;
 import com.autotune.analyzer.kruizeObject.TermSettings;
+import com.autotune.analyzer.utils.AnalyzerConstants;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.apache.commons.collections4.CollectionUtils;
 import java.util.List;
 import java.util.Map;
 
@@ -53,11 +55,11 @@ public class BulkInput {
     private TermSettings term_settings;
 
     /**
-     * Experiment types to create in this bulk job (e.g. "container", "namespace").
+     * Experiment types to create in this bulk job (e.g. CONTAINER, NAMESPACE).
      * If provided, only experiments of the specified type(s) will be created.
      * If not provided or empty, defaults to container experiments.
      */
-    private List<String> experiment_types;
+    private List<AnalyzerConstants.ExperimentType> experiment_types;
 
     // Getters and Setters
 
@@ -144,12 +146,12 @@ public class BulkInput {
     }
 
 
-    public List<String> getExperiment_types() {
+    public List<AnalyzerConstants.ExperimentType> getExperiment_types() {
         return experiment_types;
     }
 
-    public void setExperiment_types(List<String> experiment_types) {
-        if (experiment_types != null && !experiment_types.isEmpty()) {
+    public void setExperiment_types(List<AnalyzerConstants.ExperimentType> experiment_types) {
+        if (CollectionUtils.isNotEmpty(experiment_types)) {
             this.experiment_types = experiment_types;
         }
     }
