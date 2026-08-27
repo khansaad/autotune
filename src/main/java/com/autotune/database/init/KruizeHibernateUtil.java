@@ -16,8 +16,20 @@
 package com.autotune.database.init;
 
 
-import com.autotune.database.table.*;
-import com.autotune.database.table.lm.*;
+import com.autotune.database.table.KruizeAuthenticationEntry;
+import com.autotune.database.table.KruizeDataSourceEntry;
+import com.autotune.database.table.KruizeDSMetadataEntry;
+import com.autotune.database.table.KruizeExperimentEntry;
+import com.autotune.database.table.KruizeMetricProfileEntry;
+import com.autotune.database.table.KruizePerformanceProfileEntry;
+import com.autotune.database.table.KruizeRecommendationEntry;
+import com.autotune.database.table.KruizeResultsEntry;
+import com.autotune.database.table.lm.KruizeBulkConfigEntry;
+import com.autotune.database.table.lm.KruizeBulkJobEntry;
+import com.autotune.database.table.lm.KruizeLMExperimentEntry;
+import com.autotune.database.table.lm.KruizeLMLayerEntry;
+import com.autotune.database.table.lm.KruizeLMMetadataProfileEntry;
+import com.autotune.database.table.lm.KruizeLMRecommendationEntry;
 import com.autotune.operator.KruizeDeploymentInfo;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;

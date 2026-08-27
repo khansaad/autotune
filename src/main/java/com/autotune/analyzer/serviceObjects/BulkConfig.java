@@ -34,10 +34,13 @@ public class BulkConfig {
     @JsonProperty("cluster_name")
     private String clusterName;
 
+    @JsonProperty("datasources")
     private List<String> datasources = new ArrayList<>();
 
+    @JsonProperty("namespaces")
     private List<String> namespaces = new ArrayList<>();
 
+    @JsonProperty("labels")
     private Map<String, String> labels = new HashMap<>();
 
     @JsonProperty("experiment_types")
@@ -58,6 +61,7 @@ public class BulkConfig {
     @JsonProperty("webhook_url")
     private String webhookUrl;
 
+    @JsonProperty("enabled")
     private Boolean enabled = true;
 
     @JsonProperty("created_at")
@@ -194,21 +198,21 @@ public class BulkConfig {
      */
     public static class TrialSettings {
         @JsonProperty("measurement_duration")
-        private String measurementDuration;
+        private String measurementDurationMinutes;
 
         public TrialSettings() {
         }
 
-        public TrialSettings(String measurementDuration) {
-            this.measurementDuration = measurementDuration;
+        public TrialSettings(String measurementDurationMinutes) {
+            this.measurementDurationMinutes = measurementDurationMinutes;
         }
 
-        public String getMeasurementDuration() {
-            return measurementDuration;
+        public String getMeasurementDurationMinutes() {
+            return measurementDurationMinutes;
         }
 
-        public void setMeasurementDuration(String measurementDuration) {
-            this.measurementDuration = measurementDuration;
+        public void setMeasurementDurationMinutes(String measurementDurationMinutes) {
+            this.measurementDurationMinutes = measurementDurationMinutes;
         }
     }
 
@@ -216,10 +220,13 @@ public class BulkConfig {
      * Recommendation settings for the optimiser bulk config
      */
     public static class RecommendationSettings {
+        @JsonProperty("scheduling")
         private String scheduling;
 
+        @JsonProperty("terms")
         private List<String> terms = new ArrayList<>();
 
+        @JsonProperty("models")
         private List<String> models = new ArrayList<>();
 
         public RecommendationSettings() {

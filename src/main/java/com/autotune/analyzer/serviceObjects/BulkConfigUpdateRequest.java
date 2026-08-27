@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2026 Red Hat, IBM Corporation and others.
+ * Copyright (c) 2026 IBM Corporation and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -146,20 +146,21 @@ public class BulkConfigUpdateRequest {
     }
 
     /**
-     * Check if any field is set for update
-     * @return true if at least one field is set
+     * Check if any field is set for update.
+     * Empty strings and empty collections are treated as no-op updates (not meaningful).
+     * @return true if at least one field has a meaningful update
      */
     public boolean hasUpdates() {
-        return clusterName != null ||
-                datasources != null ||
-                namespaces != null ||
-                labels != null ||
-                experimentTypes != null ||
-                metadataProfile != null ||
-                performanceProfile != null ||
+        return (clusterName != null && !clusterName.trim().isEmpty()) ||
+                (datasources != null && !datasources.isEmpty()) ||
+                (namespaces != null && !namespaces.isEmpty()) ||
+                (labels != null && !labels.isEmpty()) ||
+                (experimentTypes != null && !experimentTypes.isEmpty()) ||
+                (metadataProfile != null && !metadataProfile.trim().isEmpty()) ||
+                (performanceProfile != null && !performanceProfile.trim().isEmpty()) ||
                 trialSettings != null ||
                 recommendationSettings != null ||
-                webhookUrl != null ||
+                (webhookUrl != null && !webhookUrl.trim().isEmpty()) ||
                 enabled != null;
     }
 }

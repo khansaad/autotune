@@ -2070,21 +2070,26 @@ public class ExperimentDAOImpl implements ExperimentDAO {
                 tx.commit();
                 validationOutputData.setSuccess(true);
             } catch (ConstraintViolationException e) {
-                LOGGER.error("Bulk config with name {} already exists", kruizeBulkConfigEntry.getConfigName());
+                String errorMsg = String.format(DBConstants.BULK_CONFIG_MESSAGES.BULK_CONFIG_ALREADY_EXISTS,
+                        kruizeBulkConfigEntry.getConfigName());
+                LOGGER.error(errorMsg);
                 if (tx != null) tx.rollback();
                 validationOutputData.setSuccess(false);
-                validationOutputData.setMessage("Bulk config with name " + kruizeBulkConfigEntry.getConfigName() + " already exists");
+                validationOutputData.setMessage(errorMsg);
                 validationOutputData.setErrorCode(HttpServletResponse.SC_CONFLICT);
             } catch (HibernateException e) {
-                LOGGER.error("Not able to save bulk config due to {}", e.getMessage());
+                String errorMsg = String.format(DBConstants.BULK_CONFIG_MESSAGES.ERROR_SAVING_BULK_CONFIG,
+                        e.getMessage());
+                LOGGER.error(errorMsg, e);
                 if (tx != null) tx.rollback();
-                e.printStackTrace();
                 validationOutputData.setSuccess(false);
-                validationOutputData.setMessage(e.getMessage());
+                validationOutputData.setMessage(errorMsg);
             }
         } catch (Exception e) {
-            LOGGER.error("Not able to save bulk config due to {}", e.getMessage());
-            validationOutputData.setMessage(e.getMessage());
+            String errorMsg = String.format(DBConstants.BULK_CONFIG_MESSAGES.ERROR_SAVING_BULK_CONFIG,
+                    e.getMessage());
+            LOGGER.error(errorMsg, e);
+            validationOutputData.setMessage(errorMsg);
         }
         return validationOutputData;
     }
@@ -2112,13 +2117,17 @@ public class ExperimentDAOImpl implements ExperimentDAO {
                 LOGGER.debug("Bulk config {} not found", configName);
                 if (tx != null) tx.rollback();
             } catch (HibernateException e) {
-                LOGGER.error("Error loading bulk config: {}", e.getMessage());
+                String errorMsg = String.format(DBConstants.BULK_CONFIG_MESSAGES.ERROR_LOADING_BULK_CONFIG,
+                        e.getMessage());
+                LOGGER.error(errorMsg, e);
                 if (tx != null) tx.rollback();
-                throw new Exception("Error loading bulk config: " + e.getMessage());
+                throw new Exception(errorMsg);
             }
         } catch (Exception e) {
-            LOGGER.error("Error loading bulk config: {}", e.getMessage());
-            throw new Exception("Error loading bulk config: " + e.getMessage());
+            String errorMsg = String.format(DBConstants.BULK_CONFIG_MESSAGES.ERROR_LOADING_BULK_CONFIG,
+                    e.getMessage());
+            LOGGER.error(errorMsg, e);
+            throw new Exception(errorMsg);
         }
         return kruizeBulkConfigEntry;
     }
@@ -2141,13 +2150,17 @@ public class ExperimentDAOImpl implements ExperimentDAO {
                 bulkConfigs = query.list();
                 tx.commit();
             } catch (HibernateException e) {
-                LOGGER.error("Error loading bulk configs: {}", e.getMessage());
+                String errorMsg = String.format(DBConstants.BULK_CONFIG_MESSAGES.ERROR_LOADING_BULK_CONFIGS,
+                        e.getMessage());
+                LOGGER.error(errorMsg, e);
                 if (tx != null) tx.rollback();
-                throw new Exception("Error loading bulk configs: " + e.getMessage());
+                throw new Exception(errorMsg);
             }
         } catch (Exception e) {
-            LOGGER.error("Error loading bulk configs: {}", e.getMessage());
-            throw new Exception("Error loading bulk configs: " + e.getMessage());
+            String errorMsg = String.format(DBConstants.BULK_CONFIG_MESSAGES.ERROR_LOADING_BULK_CONFIGS,
+                        e.getMessage());
+            LOGGER.error(errorMsg, e);
+            throw new Exception(errorMsg);
         }
         return bulkConfigs;
     }
@@ -2169,15 +2182,18 @@ public class ExperimentDAOImpl implements ExperimentDAO {
                 tx.commit();
                 validationOutputData.setSuccess(true);
             } catch (HibernateException e) {
-                LOGGER.error("Not able to update bulk config due to {}", e.getMessage());
+                String errorMsg = String.format(DBConstants.BULK_CONFIG_MESSAGES.ERROR_UPDATING_BULK_CONFIG,
+                        e.getMessage());
+                LOGGER.error(errorMsg, e);
                 if (tx != null) tx.rollback();
-                e.printStackTrace();
                 validationOutputData.setSuccess(false);
-                validationOutputData.setMessage(e.getMessage());
+                validationOutputData.setMessage(errorMsg);
             }
         } catch (Exception e) {
-            LOGGER.error("Not able to update bulk config due to {}", e.getMessage());
-            validationOutputData.setMessage(e.getMessage());
+            String errorMsg = String.format(DBConstants.BULK_CONFIG_MESSAGES.ERROR_UPDATING_BULK_CONFIG,
+                    e.getMessage());
+            LOGGER.error(errorMsg, e);
+            validationOutputData.setMessage(errorMsg);
         }
         return validationOutputData;
     }
@@ -2204,20 +2220,25 @@ public class ExperimentDAOImpl implements ExperimentDAO {
                 if (result > 0) {
                     validationOutputData.setSuccess(true);
                 } else {
+                    String errorMsg = String.format(DBConstants.BULK_CONFIG_MESSAGES.BULK_CONFIG_NOT_FOUND,
+                            configName);
                     validationOutputData.setSuccess(false);
-                    validationOutputData.setMessage("Bulk config not found: " + configName);
+                    validationOutputData.setMessage(errorMsg);
                     validationOutputData.setErrorCode(HttpServletResponse.SC_NOT_FOUND);
                 }
             } catch (HibernateException e) {
-                LOGGER.error("Not able to delete bulk config due to {}", e.getMessage());
+                String errorMsg = String.format(DBConstants.BULK_CONFIG_MESSAGES.ERROR_DELETING_BULK_CONFIG,
+                        e.getMessage());
+                LOGGER.error(errorMsg, e);
                 if (tx != null) tx.rollback();
-                e.printStackTrace();
                 validationOutputData.setSuccess(false);
-                validationOutputData.setMessage(e.getMessage());
+                validationOutputData.setMessage(errorMsg);
             }
         } catch (Exception e) {
-            LOGGER.error("Not able to delete bulk config due to {}", e.getMessage());
-            validationOutputData.setMessage(e.getMessage());
+            String errorMsg = String.format(DBConstants.BULK_CONFIG_MESSAGES.ERROR_DELETING_BULK_CONFIG,
+                    e.getMessage());
+            LOGGER.error(errorMsg, e);
+            validationOutputData.setMessage(errorMsg);
         }
         return validationOutputData;
     }
@@ -2240,13 +2261,17 @@ public class ExperimentDAOImpl implements ExperimentDAO {
                 bulkConfigs = query.list();
                 tx.commit();
             } catch (HibernateException e) {
-                LOGGER.error("Error loading enabled bulk configs: {}", e.getMessage());
+                String errorMsg = String.format(DBConstants.BULK_CONFIG_MESSAGES.ERROR_LOADING_ENABLED_BULK_CONFIGS,
+                        e.getMessage());
+                LOGGER.error(errorMsg, e);
                 if (tx != null) tx.rollback();
-                throw new Exception("Error loading enabled bulk configs: " + e.getMessage());
+                throw new Exception(errorMsg);
             }
         } catch (Exception e) {
-            LOGGER.error("Error loading enabled bulk configs: {}", e.getMessage());
-            throw new Exception("Error loading enabled bulk configs: " + e.getMessage());
+            String errorMsg = String.format(DBConstants.BULK_CONFIG_MESSAGES.ERROR_LOADING_ENABLED_BULK_CONFIGS,
+                        e.getMessage());
+            LOGGER.error(errorMsg, e);
+            throw new Exception(errorMsg);
         }
         return bulkConfigs;
     }

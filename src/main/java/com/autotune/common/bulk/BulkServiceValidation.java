@@ -15,6 +15,8 @@
  *******************************************************************************/
 package com.autotune.common.bulk;
 
+import com.autotune.analyzer.kruizeObject.ModelSettings;
+import com.autotune.analyzer.kruizeObject.TermSettings;
 import com.autotune.analyzer.serviceObjects.BulkInput;
 import com.autotune.common.data.ValidationOutputData;
 import com.autotune.common.datasource.DataSourceInfo;
@@ -27,6 +29,8 @@ import org.slf4j.LoggerFactory;
 
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * Utility class that performs validation for bulk service requests.
@@ -44,6 +48,17 @@ import java.time.format.DateTimeParseException;
 public class BulkServiceValidation {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(BulkServiceValidation.class);
+
+    // Valid model and term names (case-insensitive)
+    private static final List<String> VALID_MODELS = Arrays.asList(
+            KruizeConstants.JSONKeys.PERFORMANCE,
+            KruizeConstants.JSONKeys.COST
+    );
+    private static final List<String> VALID_TERMS = Arrays.asList(
+            KruizeConstants.JSONKeys.SHORT,
+            KruizeConstants.JSONKeys.MEDIUM,
+            KruizeConstants.JSONKeys.LONG
+    );
 
     /**
      * Validates the bulk request payload and returns the corresponding validation output.
@@ -66,6 +81,25 @@ public class BulkServiceValidation {
         ValidationOutputData validationOutputData;
 
         validationOutputData = buildErrorOutput(validateTimeRange(payload.getTime_range()), jobID);
+        if (validationOutputData != null) return validationOutputData;
+
+        // validateClusterName both validates and returns the normalized (trimmed) cluster name.
+        // Writing the result back onto the payload means all downstream callers (e.g. BulkJobManager)
+        // can use payload.getCluster_name() directly without repeating trim/empty checks.
+        String[] clusterNameError = new String[1];
+        String normalizedClusterName = validateClusterName(payload.getCluster_name(), clusterNameError);
+        if (clusterNameError[0] != null) {
+            return buildErrorOutput(clusterNameError[0], jobID);
+        }
+        // null means the field was not supplied (optional); a non-null trimmed value is written back.
+        payload.setCluster_name(normalizedClusterName);
+
+        // Validate model_settings if provided
+        validationOutputData = buildErrorOutput(validateModelSettings(payload.getModel_settings()), jobID);
+        if (validationOutputData != null) return validationOutputData;
+
+        // Validate term_settings if provided
+        validationOutputData = buildErrorOutput(validateTermSettings(payload.getTerm_settings()), jobID);
         if (validationOutputData != null) return validationOutputData;
 
         if (payload.getDatasource() != null) {
@@ -167,4 +201,95 @@ public class BulkServiceValidation {
         }
         return errorMessage;
     }
+
+    /**
+     * Validates the {@code cluster_name} field and returns its normalized (trimmed) value.
+     *
+     * <p>This method centralizes all trimming and length-checking logic so callers never
+     * need to repeat these operations:
+     * <ul>
+     *   <li>If {@code clusterName} is {@code null} (optional field not supplied), {@code null}
+     *       is returned and {@code errorOut[0]} is left as {@code null} — "not set" is valid.</li>
+     *   <li>If the trimmed value is blank, {@code null} is returned and {@code errorOut[0]}
+     *       is set to {@link KruizeConstants.KRUIZE_BULK_API#CLUSTER_NAME_EMPTY}.</li>
+     *   <li>If the trimmed value exceeds {@link KruizeConstants.KRUIZE_BULK_API#MAX_CLUSTER_NAME_LENGTH}
+     *       characters, {@code null} is returned and {@code errorOut[0]} is set to the
+     *       {@link KruizeConstants.KRUIZE_BULK_API#CLUSTER_NAME_TOO_LONG} message.</li>
+     *   <li>Otherwise the trimmed, valid value is returned and {@code errorOut[0]} remains {@code null}.</li>
+     * </ul>
+     *
+     * @param clusterName the raw cluster name from the request payload (may be null)
+     * @param errorOut    a single-element array used to surface the error message; {@code errorOut[0]}
+     *                    is {@code null} when validation succeeds
+     * @return the trimmed cluster name on success; {@code null} when not supplied or on validation failure
+     */
+    public static String validateClusterName(String clusterName, String[] errorOut) {
+        if (clusterName == null) {
+            return null; // Optional field — not supplied, no error
+        }
+        String trimmed = clusterName.trim();
+        if (trimmed.isEmpty()) {
+            errorOut[0] = KruizeConstants.KRUIZE_BULK_API.CLUSTER_NAME_EMPTY;
+            return null;
+        }
+        if (trimmed.length() > KruizeConstants.KRUIZE_BULK_API.MAX_CLUSTER_NAME_LENGTH) {
+            errorOut[0] = String.format(KruizeConstants.KRUIZE_BULK_API.CLUSTER_NAME_TOO_LONG,
+                    KruizeConstants.KRUIZE_BULK_API.MAX_CLUSTER_NAME_LENGTH, trimmed.length());
+            return null;
+        }
+        return trimmed; // Normalized value
+    }
+
+    /**
+     * Validates the model_settings field if provided.
+     * Checks that models array is not null/empty and all names are valid (case-insensitive).
+     *
+     * @param modelSettings the model settings to validate (can be null)
+     * @return an error message if validation fails; otherwise an empty string
+     */
+    public static String validateModelSettings(ModelSettings modelSettings) {
+        if (modelSettings == null) {
+            return ""; // Optional field
+        }
+        List<String> models = modelSettings.getModels();
+        if (models == null || models.isEmpty()) {
+            return "model_settings.models cannot be null or empty";
+        }
+        for (String model : models) {
+            if (model == null || model.trim().isEmpty()) {
+                return "model_settings.models contains null or empty model name";
+            }
+            if (!VALID_MODELS.contains(model.toLowerCase())) {
+                return "Invalid model name: " + model + ". Valid models are: " + VALID_MODELS;
+            }
+        }
+        return "";
+    }
+
+    /**
+     * Validates the term_settings field if provided.
+     * Checks that terms array is not null/empty and all names are valid (case-insensitive).
+     *
+     * @param termSettings the term settings to validate (can be null)
+     * @return an error message if validation fails; otherwise an empty string
+     */
+    public static String validateTermSettings(TermSettings termSettings) {
+        if (termSettings == null) {
+            return ""; // Optional field
+        }
+        List<String> terms = termSettings.getTerms();
+        if (terms == null || terms.isEmpty()) {
+            return "term_settings.terms cannot be null or empty";
+        }
+        for (String term : terms) {
+            if (term == null || term.trim().isEmpty()) {
+                return "term_settings.terms contains null or empty term name";
+            }
+            if (!VALID_TERMS.contains(term.toLowerCase())) {
+                return "Invalid term name: " + term + ". Valid terms are: " + VALID_TERMS;
+            }
+        }
+        return "";
+    }
+
 }
