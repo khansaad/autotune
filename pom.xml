@@ -28,7 +28,6 @@
         <evalex-version>3.6.2</evalex-version>
         <mockito-version>5.23.0</mockito-version>
         <kafka-version>4.2.0</kafka-version>
-        <commons-collections4-version>4.4</commons-collections4-version>
         <maven-surefire-plugin-version>3.5.2</maven-surefire-plugin-version>
         <argLine></argLine>
         <surefireArgLine>-Dnet.bytebuddy.experimental=true</surefireArgLine>
@@ -196,12 +195,6 @@
             <groupId>org.apache.kafka</groupId>
             <artifactId>kafka-clients</artifactId>
             <version>${kafka-version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-collections4</artifactId>
-            <version>${commons-collections4-version}</version>
         </dependency>
 
     </dependencies>

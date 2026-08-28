@@ -331,8 +331,12 @@ public class AnalyzerConstants {
 
         @JsonCreator
         public static ExperimentType fromString(String value) {
-            if (value == null) return null;
-            return ExperimentType.valueOf(value.trim().toUpperCase());
+            if (value == null || value.trim().isEmpty()) return null;
+            try {
+                return ExperimentType.valueOf(value.trim().toUpperCase());
+            } catch (IllegalArgumentException e) {
+                return null;
+            }
         }
     }
 

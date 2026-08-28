@@ -26,7 +26,6 @@ import com.autotune.common.utils.CommonUtils;
 import com.autotune.database.service.ExperimentDBService;
 import com.autotune.analyzer.utils.AnalyzerConstants;
 import com.autotune.utils.KruizeConstants;
-import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -321,7 +320,7 @@ public class BulkServiceValidation {
      * @return an error message if validation fails; otherwise an empty string
      */
     public static String validateExperimentTypes(List<AnalyzerConstants.ExperimentType> experimentTypes) {
-        if (CollectionUtils.isEmpty(experimentTypes)) {
+        if (experimentTypes == null || experimentTypes.isEmpty()) {
             return ""; // null/empty is valid; defaults to container experiments
         }
 

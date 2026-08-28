@@ -19,7 +19,6 @@ import com.autotune.analyzer.kruizeObject.ModelSettings;
 import com.autotune.analyzer.kruizeObject.TermSettings;
 import com.autotune.analyzer.utils.AnalyzerConstants;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import org.apache.commons.collections4.CollectionUtils;
 import java.util.List;
 import java.util.Map;
 
@@ -151,7 +150,7 @@ public class BulkInput {
     }
 
     public void setExperiment_types(List<AnalyzerConstants.ExperimentType> experiment_types) {
-        if (CollectionUtils.isNotEmpty(experiment_types)) {
+        if (experiment_types != null && !experiment_types.isEmpty()) {
             this.experiment_types = experiment_types;
         }
     }

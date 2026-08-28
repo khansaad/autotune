@@ -511,8 +511,10 @@ public class BulkJobManager implements Runnable {
         String statusValue = "failure";
         Timer.Sample timerGetExpMap = Timer.start(MetricsConfig.meterRegistry());
         try {
-            // Resolve the requested experiment type once for the entire job
-            AnalyzerConstants.ExperimentType resolvedType = resolveExperimentType(this.bulkInput.getExperiment_types());
+            List<AnalyzerConstants.ExperimentType> experimentTypes = this.bulkInput.getExperiment_types();
+            AnalyzerConstants.ExperimentType experimentType = (experimentTypes == null || experimentTypes.isEmpty())
+                    ? AnalyzerConstants.ExperimentType.CONTAINER
+                    : experimentTypes.get(0);
 
             Map<String, CreateExperimentAPIObject> createExperimentAPIObjectMap = new HashMap<>();
             Collection<DataSource> dataSourceCollection = metadataInfo.getDatasources().values();
@@ -524,11 +526,11 @@ public class BulkJobManager implements Runnable {
                             : dsc.getDataSourceClusterName();
                     HashMap<String, DataSourceNamespace> namespaceHashMap = dsc.getNamespaces();
                     for (DataSourceNamespace namespace : namespaceHashMap.values()) {
-                        if (resolvedType == AnalyzerConstants.ExperimentType.NAMESPACE) {
+                        if (experimentType == AnalyzerConstants.ExperimentType.NAMESPACE) {
                             // One namespace experiment per namespace
-                            String experiment_name = frameNamespaceExperimentName(labelString, dsc, namespace);
+                            String experiment_name = frameNamespaceExperimentName(labelString, clusterName, namespace);
                             List<CreateExperimentAPIObject> createExperimentAPIObjectList = new ArrayList<>();
-                            CreateExperimentAPIObject apiObject = prepareNamespaceExperimentJSONInput(dsc, namespace,
+                            CreateExperimentAPIObject apiObject = prepareNamespaceExperimentJSONInput(clusterName, namespace,
                                     experiment_name, createExperimentAPIObjectList);
                             createExperimentAPIObjectMap.put(experiment_name, apiObject);
                         } else {
@@ -767,38 +769,18 @@ public class BulkJobManager implements Runnable {
 
 
     /**
-     * Resolves the ExperimentType that the bulk job should create.
-     * Defaults to CONTAINER when experiment_types is absent or empty.
-     *
-     * <p>BulkServiceValidation enforces that at most one entry is present and
-     * that it is a valid {@link AnalyzerConstants.ExperimentType}, so by the
-     * time this method is called the list is guaranteed to be null, empty, or
-     * a single valid enum value.</p>
-     *
-     * @param experimentTypes the validated list from BulkInput.experiment_types
-     *                        (null, empty, or exactly one recognized value)
-     * @return the resolved ExperimentType
-     */
-    private AnalyzerConstants.ExperimentType resolveExperimentType(List<AnalyzerConstants.ExperimentType> experimentTypes) {
-        if (experimentTypes == null || experimentTypes.isEmpty()) {
-            return AnalyzerConstants.ExperimentType.CONTAINER;
-        }
-        return experimentTypes.get(0);
-    }
-
-    /**
      * Builds a CreateExperimentAPIObject for a namespace-level experiment.
      * The kubernetes_objects entry contains only a namespaces block (no
      * workload name/type or containers), matching the payload expected by
      * CreateExperiment for experiment_type "namespace".
      *
-     * @param dsc                        DataSourceCluster for cluster metadata
+     * @param clusterName                resolved cluster name (user override or data source cluster name)
      * @param namespace                  DataSourceNamespace whose namespace is being tracked
      * @param experiment_name            pre-framed experiment name
      * @param createExperimentAPIObjects accumulator list
      * @return the constructed CreateExperimentAPIObject
      */
-    private CreateExperimentAPIObject prepareNamespaceExperimentJSONInput(DataSourceCluster dsc, DataSourceNamespace namespace,
+    private CreateExperimentAPIObject prepareNamespaceExperimentJSONInput(String clusterName, DataSourceNamespace namespace,
                                                                           String experiment_name, List<CreateExperimentAPIObject> createExperimentAPIObjects) throws IOException {
         CreateExperimentAPIObject createExperimentAPIObject = new CreateExperimentAPIObject();
         createExperimentAPIObject.setMode(CREATE_EXPERIMENT_CONFIG_BEAN.getMode());
@@ -806,15 +788,6 @@ public class BulkJobManager implements Runnable {
         createExperimentAPIObject.setApiVersion(CREATE_EXPERIMENT_CONFIG_BEAN.getVersion());
         createExperimentAPIObject.setExperimentName(experiment_name);
         createExperimentAPIObject.setDatasource(this.bulkInput.getDatasource());
-
-        // Use cluster_name from bulk payload if provided (trimmed), otherwise use metadata cluster
-        String clusterName = dsc.getDataSourceClusterName();
-        if (this.bulkInput.getCluster_name() != null) {
-            String trimmedClusterName = this.bulkInput.getCluster_name().trim();
-            if (!trimmedClusterName.isEmpty()) {
-                clusterName = trimmedClusterName;
-            }
-        }
         createExperimentAPIObject.setClusterName(clusterName);
         createExperimentAPIObject.setPerformanceProfile(CREATE_EXPERIMENT_CONFIG_BEAN.getPerformanceProfile());
         createExperimentAPIObject.setMetadataProfile(CREATE_EXPERIMENT_CONFIG_BEAN.getMetadataProfile());
@@ -855,15 +828,14 @@ public class BulkJobManager implements Runnable {
      * Uses datasource, cluster name, and namespace — workload/container
      * segments are not meaningful for namespace experiments.
      *
-     * @param labelString       label filter string (may be null)
-     * @param dataSourceCluster cluster metadata
-     * @param namespace         namespace metadata
+     * @param labelString  label filter string (may be null)
+     * @param clusterName  resolved cluster name (user override or data source cluster name)
+     * @param namespace    namespace metadata
      * @return framed experiment name
      */
-    public String frameNamespaceExperimentName(String labelString, DataSourceCluster dataSourceCluster,
+    public String frameNamespaceExperimentName(String labelString, String clusterName,
                                                DataSourceNamespace namespace) {
         String datasource = this.bulkInput.getDatasource();
-        String clusterName = dataSourceCluster.getDataSourceClusterName();
         String namespaceName = namespace.getNamespace();
 
         // Namespace experiment name: datasource|clustername|namespace
