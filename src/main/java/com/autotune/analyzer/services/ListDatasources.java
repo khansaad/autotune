@@ -159,7 +159,8 @@ public class ListDatasources extends HttpServlet {
                 .addSerializationExclusionStrategy(new ExclusionStrategy() {
                     @Override
                     public boolean shouldSkipField(FieldAttributes f) {
-                        return false;
+                        return f.getDeclaringClass() == DataSourceInfo.class
+                                && f.getName().equals("authenticationConfig");
                     }
                     @Override
                     public boolean shouldSkipClass(Class<?> clazz) {

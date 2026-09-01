@@ -265,13 +265,7 @@ public class DSMetadataService extends HttpServlet {
 
         String gsonStr = "";
         if (null != dataSourceMetadata) {
-            Gson gsonObj = new GsonBuilder()
-                    .disableHtmlEscaping()
-                    .setPrettyPrinting()
-                    .enableComplexMapKeySerialization()
-                    .registerTypeAdapter(Date.class, new GsonUTCDateAdapter())
-                    .registerTypeAdapter(AnalyzerConstants.RecommendationItem.class, new RecommendationItemAdapter())
-                    .create();
+            Gson gsonObj = createGsonObject();
             gsonStr = gsonObj.toJson(dataSourceMetadata);
         }
         response.getWriter().println(gsonStr);
@@ -452,7 +446,8 @@ public class DSMetadataService extends HttpServlet {
                 .addSerializationExclusionStrategy(new ExclusionStrategy() {
                     @Override
                     public boolean shouldSkipField(FieldAttributes f) {
-                        return false;
+                        return f.getDeclaringClass() == DataSourceInfo.class
+                                && f.getName().equals("authenticationConfig");
                     }
                     @Override
                     public boolean shouldSkipClass(Class<?> clazz) {

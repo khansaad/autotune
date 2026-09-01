@@ -1198,8 +1198,7 @@ public class DBHelpers {
                                 }
                                 authConfig = AuthenticationConfig.createAuthenticationConfigObject(authJson);
                             } catch (Exception e) {
-                                e.printStackTrace();
-                                LOGGER.error("GSON failed to convert the DB Json object in convertKruizeDataSourceToDataSourceObject");
+                                LOGGER.error("GSON failed to convert the DB Json object in convertKruizeDataSourceToDataSourceObject", e);
                             }
                         }
                         if (kruizeDataSource.getServiceName().isEmpty() && null != kruizeDataSource.getUrl()) {
@@ -1482,8 +1481,7 @@ public class DBHelpers {
                     kruizeAuthenticationEntry.setServiceType(serviceType);
                 } catch (Exception e) {
                     kruizeAuthenticationEntry = null;
-                    LOGGER.error("Error while converting Auth details Object to KruizeAuthentication table : {}", e.getMessage());
-                    e.printStackTrace();
+                    LOGGER.error("Error while converting Auth details Object to KruizeAuthentication table : {}", e.getMessage(), e);
                 }
                 return kruizeAuthenticationEntry;
             }
